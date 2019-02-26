@@ -64,16 +64,30 @@ oClient.on('user_id', (userId) => {
   oClient.devices()
 })
 
+oClient.on('device_id', (deviceId) => {
+  console.log(`${ts()} - device_id: ${deviceId}`)
+})
+
 oClient.on('devices', (data) => {
   console.log(`${ts()} - devices: ` + JSON.stringify(data))
-  if (typeof data[0].status.watering_status === 'object') {
-    if (MCLIENT_ONLINE) mClient.publish('bhyve/status', JSON.stringify(data[0].status.watering_status))
-  } else {
-    if (MCLIENT_ONLINE) mClient.publish('bhyve/status', null)
-  }
-  console.log(`${ts()} - status: ` + JSON.stringify(data[0].status.watering_status))
+  let devices = []
 
-  if (MCLIENT_ONLINE) mClient.publish('bhyve/devices', JSON.stringify(data))
+  for (let prop in data) {
+    if (data.hasOwnProperty(prop)) {
+      let deviceId = data[prop].id
+      devices.push(deviceId)
+      if (typeof data[prop].status.watering_status === 'object') {
+        if (MCLIENT_ONLINE) mClient.publish(`bhyve/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
+      } else {
+        if (MCLIENT_ONLINE) mClient.publish(`bhyve/${deviceId}/status`, null)
+      }
+      console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
+
+      if (MCLIENT_ONLINE) mClient.publish(`bhyve/${deviceId}/details`, JSON.stringify(data))
+    }
+  }
+  if (MCLIENT_ONLINE) mClient.publish(`bhyve/devices`, JSON.stringify(devices))
+
   oClient.connectStream()
 })
 

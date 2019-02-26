@@ -26,7 +26,7 @@ function Client () {
   }
   this._token = undefined
   this._user_id = undefined
-  this._device = undefined
+  this._device_id = undefined
 }
 inherits(Client, EventEmitter)
 
@@ -90,6 +90,7 @@ Client.prototype.devices = function () {
       instance.get('/v1/devices?user_id=' + self._user_id)
         .then(function (response) {
           if (self.config.debug) console.log(`${ts()} - response.data: ` + JSON.stringify(response.data))
+          self._device_id = response.data[0].id
           resolve(response)
         }).catch(function (err) {
           reject(err)
@@ -100,6 +101,7 @@ Client.prototype.devices = function () {
   const doAccept = (response) => {
     if (self.config.debug) console.log(`${ts()} - response.data: ` + JSON.stringify(response.data))
     self.emit('devices', response.data)
+    self.emit('device_id', self._device_id)
   }
   const doReject = (err) => {
     if (self.config.debug) console.log(`${ts()} - error: ` + err)
