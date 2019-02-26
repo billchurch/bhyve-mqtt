@@ -1,0 +1,27 @@
+{
+  "name": "bhyve-mqtt",
+  "version": "0.0.1",
+  "description": "A MQTT gateway for the unofficial Orbit B-Hyve API indended for use with HomeAssistant",
+  "main": "app.js",
+  "keywords": [
+    "orbit bhyve",
+    "homeassistant",
+    "mqtt"
+  ],
+  "scripts": {
+    "start": "node -r dotenv/config app.js dotenv_config_path=./.env",
+    "cleanmac": "find . -name '.DS_Store' -type f -delete",
+    "standard": "standard --verbose --fix"
+  },
+  "author": "bill church",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "dotenv": "^6.0.0",
+    "mqtt": "^2.18.0",
+    "ws": "^6.1.4"
+  },
+  "devDependencies": {
+    "standard": "^12.0.1"
+  }
+}
