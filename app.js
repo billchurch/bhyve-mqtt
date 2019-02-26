@@ -69,13 +69,13 @@ oClient.on('device_id', (deviceId) => {
 })
 
 oClient.on('devices', (data) => {
-  console.log(`${ts()} - devices: ` + JSON.stringify(data))
   let devices = []
 
   for (let prop in data) {
     if (data.hasOwnProperty(prop)) {
       let deviceId = data[prop].id
       devices.push(deviceId)
+      console.log(`${ts()} - devices: ` + JSON.stringify(data[prop]))
       if (typeof data[prop].status.watering_status === 'object') {
         if (MCLIENT_ONLINE) mClient.publish(`bhyve/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
       } else {
@@ -84,6 +84,10 @@ oClient.on('devices', (data) => {
       console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
 
       if (MCLIENT_ONLINE) mClient.publish(`bhyve/${deviceId}/details`, JSON.stringify(data))
+      for (let zone in data[prop].zones) {
+        let station = data[prop].zones[zone].station
+        if (MCLIENT_ONLINE) mClient.publish(`bhyve/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
+      }
     }
   }
   if (MCLIENT_ONLINE) mClient.publish(`bhyve/devices`, JSON.stringify(devices))
