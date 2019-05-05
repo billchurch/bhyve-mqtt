@@ -32,17 +32,17 @@ Still a work in progress, this is as it stands now.
 
 ### Events
 * **bhyve/alive** - _json_ - We received a token from the bhyve API and should be ready to work
-* **bhyve/${deviceID}/status** - _json_ - If bhyve has an active event, relay this event, else null
-* **bhyve/${deviceID}/details** - _json_ - A ridiculous amount of info, most important is list of zones for the device - **RETAINED**
-* **bhyve/${deviceID}/zone/${num}** - _json_ - Zone detail
-* **bhyve/${deviceID}/devices** - _json_ - List of devices
-* **bhyve/${deviceID}/message** - _json_ - Relay of event from the API example:
+* **bhyve/{deviceID}/status** - _json_ - If bhyve has an active event, relay this event, else null
+* **bhyve/{deviceID}/details** - _json_ - A ridiculous amount of info, most important is list of zones for the device - **RETAINED**
+* **bhyve/{deviceID}/zone/{num}** - _json_ - Zone detail
+* **bhyve/{deviceID}/devices** - _json_ - List of devices
+* **bhyve/{deviceID}/message** - _json_ - Relay of event from the API example:
 ```
 {"event":"change_mode","mode":"manual","program":null,"stations":[],"device_id":"e2398h2398h89h2ff","timestamp":"2019-05-05T08:50:06.000Z"}`
 ```
 
 ### Commands
-* **bhyve/${deviceID}/zone/{num}/set** - _json_ - `{ "state": "(ON|on|OFF|off)", "time": 12 }` - turns station on/off for _n_ minutes. Time is not used/ignored for `OFF` state but is required for ON state. Examples:
+* **bhyve/{deviceID}/zone/{num}/set** - _json_ - `{ "state": "(ON|on|OFF|off)", "time": 12 }` - turns station on/off for _n_ minutes. Time is not used/ignored for `OFF` state but is required for ON state. Examples:
 ```
 // Sets zone 2 to ON for 20 minutes
 bhyve/ABC12345/zone/2/set
