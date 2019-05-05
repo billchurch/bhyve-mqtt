@@ -117,7 +117,6 @@ Client.prototype.send = function (message) {
   var self = this
 
   self._stream.send(JSON.stringify(message))
-  console.log('send: ' + require('util').inspect(test))
   console.log('send json: ' + JSON.stringify(message))
 }
 

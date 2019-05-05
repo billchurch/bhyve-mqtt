@@ -6,6 +6,7 @@
  * Bill Church - https://github.com/billchurch/bhyve-mqtt
  *
  */
+const Ajv = require('ajv')
 const Orbit = require('./orbit')
 const mqtt = require('mqtt')
 var MCLIENT_ONLINE = false
@@ -107,46 +108,78 @@ oClient.on('devices', (data) => {
 const parseMessage = (topic, message) => {
   // looking for
   // topic: bhyve/{device_id}/zone/{station}/set
-  // message: ON/OFF
-  let found = topic.match(/bhyve\/(.*)\/zone\/(\d)\/set/)
-  let deviceId = found[1]
-  let station = found[2]
-  let command = message.toString()
+  // message:
+  // { "state": "ON", "time": int }
+  // { "state": "OFF" }
+  let ajv = new Ajv()
+  const schema = {
+    'if': { 'properties': { 'state': { 'enum': ['ON', 'on'] } } },
+    'then': { 'required': ['time'] },
+    'properties': {
+      'time': {
+        'type': 'number',
+        'minimum': 1,
+        'maximum': 999
+      },
+      'state': {
+        'type': 'string',
+        'enum': ['ON', 'OFF', 'on', 'off']
+      }
+    }
+  }
+  let JSONvalidate = ajv.compile(schema)
+  const found = topic.match(/bhyve\/(.*)\/zone\/(\d)\/set/)
+  const deviceId = found[1]
+  const station = Number(found[2])
+  const command = JSON.parse(message.toString())
+  let CMD_VALID = JSONvalidate(command)
+  if (!CMD_VALID) {
+    throw new Error(JSON.stringify(JSONvalidate.errors))
+  }
   let myJSON = {}
   console.log('deviceId: ' + deviceId + ' station: ' + station + ' command: ' + require('util').inspect(command))
-  switch (command) {
-    case 'ON':
+  switch (command.state.toLowerCase()) {
+    case 'on':
+      console.log('in on')
+      myJSON = {
+        'event': 'change_mode',
+        'mode': 'manual',
+        'device_id': deviceId,
+        'timestamp': ts(),
+        'stations': [
+          {
+            'station': station,
+            'run_time': command.time
+          }
+        ]
+      }
+      break
+    case 'off':
+      console.log('in off')
       myJSON = {
         'event': 'change_mode',
         'device_id': deviceId,
         'timestamp': ts(),
         'mode': 'manual',
-        'stations': [
-          {
-            'station': station,
-            'run_time': 10
-          }
-        ]
+        'stations': []
       }
-      console.log('in ON')
-      break
-      //    case 'OFF':
-      //      console.log('in OFF')
     default:
       console.log('in default')
       myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
   }
   oClient.send(myJSON)
-
   console.log('myJSON: ' + JSON.stringify(myJSON))
-
-  // to construct a JSON object like
-  //
 }
 
 mClient.on('message', (topic, message) => {
-  console.log('topic: ' + topic + ' message: ' + message.toString())
-  parseMessage(topic, message)
+  // console.log('topic: ' + topic + ' message: ' + message.toString())
+  try {
+    parseMessage(topic, message)
+  } catch (e) {
+    console.log(`${ts()} parseMessage ERROR: JSONvalidate failed: `)
+    console.log('    validation error: ' + e)
+    console.log('    client message: ' + message.toString())
+  }
 })
 
 oClient.on('error', (err) => {
