@@ -33,12 +33,12 @@ inherits(Client, EventEmitter)
 // first step, get a token and generate an event on success or fail
 Client.prototype.connect = function (cfg) {
   this.config.baseURL = cfg.baseURL || 'https://api.orbitbhyve.com'
-  this.config.timeout = cfg.timeout || 1000
+  this.config.timeout = cfg.timeout || 10000
   this.config.email = cfg.email || undefined
   this.config.password = cfg.password || undefined
   this.config.debug = cfg.debug || false
   this.config.wssURL = cfg.wssURL || 'wss://api.orbitbhyve.com/v1/events'
-  this.config.wsTimeout = cfg.wsTimeout || 1000
+  this.config.wsTimeout = cfg.wsTimeout || 10000
   this.config.debug = cfg.debug || false
   var self = this
 
@@ -113,16 +113,24 @@ Client.prototype.devices = function () {
     .catch(doReject)
 }
 
+Client.prototype.send = function (message) {
+  var self = this
+
+  self._stream.send(JSON.stringify(message))
+  console.log('send: ' + require('util').inspect(test))
+  console.log('send json: ' + JSON.stringify(message))
+}
+
 Client.prototype.connectStream = function () {
   var self = this
 
-  const clientStream = new WebSocket(self.config.wssURL, {
+  self._stream = new WebSocket(self.config.wssURL, {
     handshakeTimeout: self.config.wsTimeout
   })
 
   function sendPing () {
     if (self.config.debug) console.log(`${ts()} - websocket sending ping`)
-    clientStream.send('{"event":"ping"}')
+    self._stream.send('{"event":"ping"}')
   }
 
   const authenticate = () => {
@@ -133,29 +141,29 @@ Client.prototype.connectStream = function () {
 
     if (self.config.debug) console.log(`${ts()} - websocket authenticate message: ` + JSON.stringify(message))
 
-    clientStream.send(JSON.stringify(message))
+    self._stream.send(JSON.stringify(message))
     setInterval(sendPing, 25 * 1000)
   }
 
-  clientStream.on('open', authenticate)
+  self._stream.on('open', authenticate)
 
-  clientStream.on('message', function (data) {
-    self.emit('message', data)
+  self._stream.on('message', function (data) {
+    self.emit('message', JSON.parse(data))
   })
 
-  clientStream.on('error', function (err) {
+  self._stream.on('error', function (err) {
     self.emit('error', err)
   })
 
-  clientStream.on('close', function (num, reason) {
+  self._stream.on('close', function (num, reason) {
     if (self.config.debug) console.log(`${ts()} - close: ` + num + ' reason: ' + reason)
   })
 
-  clientStream.on('ping', function (data) {
+  self._stream.on('ping', function (data) {
     if (self.config.debug) console.log(`${ts()} - ping data: ` + data)
   })
 
-  clientStream.on('unexpected-response', function (request, response) {
+  self._stream.on('unexpected-response', function (request, response) {
     console.error(`${ts()} - unexpected-response / request: ` + request + ' response: ' + response)
   })
 }
