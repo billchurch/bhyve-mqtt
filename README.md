@@ -42,7 +42,7 @@ Still a work in progress, this is as it stands now.
 ```
 
 ### Commands
-* **bhyve/{deviceID}/zone/{num}/set** - _json_ - `{ "state": "(ON|on|OFF|off)", "time": 12 }` - turns station on/off for _n_ minutes. Time is not used/ignored for `OFF` state but is required for ON state. Examples:
+* **bhyve/{deviceID}/zone/{num}/set** - _json_ - `{ "state": "(ON|on|OFF|off)", "time": 12 }` - turns station on/off for _n_ minutes. `time` is not used/ignored for `OFF` state but is required for `ON` state. Examples:
 ```
 // Sets zone 2 to ON for 20 minutes
 bhyve/ABC12345/zone/2/set
