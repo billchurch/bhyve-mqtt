@@ -85,7 +85,7 @@ oClient.on('devices', (data) => {
         }
         console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
 
-        mClient.publish(`bhyve/${deviceId}/details`, JSON.stringify(data[prop]))
+        mClient.publish(`bhyve/${deviceId}/details`, JSON.stringify(data[prop]), { retain: true })
         for (let zone in data[prop].zones) {
           let station = data[prop].zones[zone].station
           mClient.publish(`bhyve/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
