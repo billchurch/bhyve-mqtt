@@ -38,7 +38,7 @@ Still a work in progress, this is as it stands now.
 * **bhyve/{deviceID}/devices** - _json_ - List of devices
 * **bhyve/{deviceID}/message** - _json_ - Relay of event from the API example:
 ```
-{"event":"change_mode","mode":"manual","program":null,"stations":[],"device_id":"e2398h2398h89h2ff","timestamp":"2019-05-05T08:50:06.000Z"}`
+{"event":"change_mode","mode":"manual","program":null,"stations":[],"device_id":"ABC12345","timestamp":"2019-05-05T08:50:06.000Z"}`
 ```
 
 ### Commands
