@@ -33,7 +33,7 @@ Still a work in progress, this is as it stands now.
 ### Events
 * **bhyve/alive** - _json_ - We received a token from the bhyve API and should be ready to work
 * **bhyve/${deviceID}/status** - _json_ - If bhyve has an active event, relay this event, else null
-* **bhyve/${deviceID}/details** - _json_ - A ridiculous amount of info, most important is list of zones for the device
+* **bhyve/${deviceID}/details** - _json_ - A ridiculous amount of info, most important is list of zones for the device - **RETAINED**
 * **bhyve/${deviceID}/zone/${num}** - _json_ - Zone detail
 * **bhyve/${deviceID}/devices** - _json_ - List of devices
 * **bhyve/${deviceID}/message** - _json_ - Relay of event from the API example:
