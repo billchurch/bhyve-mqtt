@@ -9,6 +9,7 @@
 const Ajv = require('ajv')
 const Orbit = require('./orbit')
 const mqtt = require('mqtt')
+
 var MCLIENT_ONLINE = false
 let ts = () => new Date().toISOString()
 
@@ -19,12 +20,13 @@ const mClient = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, {
   password: process.env.MQTT_PASSWORD,
   keepalive: 10000,
   connectTimeout: 120000,
-  reconnectPeriod: 500
+  reconnectPeriod: 500,
+  clientId: 'bhyve-mqtt_' + Math.random().toString(16).substr(2, 8)
 })
 
 const handleClientError = function (err) {
-  console.error('connection error to broker, exiting')
-  console.error(err)
+  console.error(`${ts()} - connection error to broker, exiting`)
+  console.error('    ' + err)
   setTimeout(() => {
     process.exit()
   }, 10000)
@@ -69,33 +71,38 @@ oClient.on('device_id', (deviceId) => {
   console.log(`${ts()} - device_id: ${deviceId}`)
 })
 
+let subscribeHandler = function (topic) {
+  console.log(`${ts()} - subscribe topic: ` + topic)
+  mClient.subscribe(topic, (err, granted) => {
+    if (err) {
+      console.error(`mClient.subscribe ${topic} error:`)
+      console.error('    ' + err)
+    }
+    console.log(`${ts()} - granted: ` + JSON.stringify(granted))
+  })
+}
+
 oClient.on('devices', (data) => {
   if (MCLIENT_ONLINE) {
     let devices = []
-
+    subscribeHandler(`bhyve/device/refresh`)
     for (let prop in data) {
       if (data.hasOwnProperty(prop)) {
         let deviceId = data[prop].id
         devices.push(deviceId)
         console.log(`${ts()} - devices: ` + JSON.stringify(data[prop]))
         if (typeof data[prop].status.watering_status === 'object') {
-          mClient.publish(`bhyve/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
+          mClient.publish(`bhyve/device/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
         } else {
-          mClient.publish(`bhyve/${deviceId}/status`, null)
+          mClient.publish(`bhyve/device/${deviceId}/status`, null)
         }
         console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
-
-        mClient.publish(`bhyve/${deviceId}/details`, JSON.stringify(data[prop]), { retain: true })
+        subscribeHandler(`bhyve/device/${deviceId}/refresh`)
+        mClient.publish(`bhyve/device/${deviceId}/details`, JSON.stringify(data[prop]), { retain: true })
         for (let zone in data[prop].zones) {
           let station = data[prop].zones[zone].station
-          mClient.publish(`bhyve/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
-          mClient.subscribe(`bhyve/${deviceId}/zone/${station}/set`, (err, granted) => {
-            if (err) {
-              console.error(`mClient.subscribe bhyve/${deviceId}/zone/${station}/set error:`)
-              console.error(err)
-            }
-            console.log('granted: ' + JSON.stringify(granted))
-          })
+          mClient.publish(`bhyve/device/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
+          subscribeHandler(`bhyve/device/${deviceId}/zone/${station}/set`)
         }
       }
     }
@@ -106,69 +113,66 @@ oClient.on('devices', (data) => {
 })
 
 const parseMessage = (topic, message) => {
-  // looking for
-  // topic: bhyve/{device_id}/zone/{station}/set
-  // message:
-  // { "state": "ON", "time": int }
-  // { "state": "OFF" }
-  let ajv = new Ajv()
-  const schema = {
-    'if': { 'properties': { 'state': { 'enum': ['ON', 'on'] } } },
-    'then': { 'required': ['time'] },
-    'properties': {
-      'time': {
-        'type': 'number',
-        'minimum': 1,
-        'maximum': 999
-      },
-      'state': {
-        'type': 'string',
-        'enum': ['ON', 'OFF', 'on', 'off']
-      }
-    }
-  }
-  let JSONvalidate = ajv.compile(schema)
-  const found = topic.match(/bhyve\/(.*)\/zone\/(\d)\/set/)
-  const deviceId = found[1]
-  const station = Number(found[2])
-  const command = JSON.parse(message.toString())
-  let CMD_VALID = JSONvalidate(command)
-  if (!CMD_VALID) {
-    throw new Error(JSON.stringify(JSONvalidate.errors))
-  }
-  let myJSON = {}
-  console.log('deviceId: ' + deviceId + ' station: ' + station + ' command: ' + require('util').inspect(command))
-  switch (command.state.toLowerCase()) {
-    case 'on':
-      console.log('in on')
-      myJSON = {
-        'event': 'change_mode',
-        'mode': 'manual',
-        'device_id': deviceId,
-        'timestamp': ts(),
-        'stations': [
-          {
-            'station': station,
-            'run_time': command.time
+  console.log(`${ts()} - parseMessage topic: ${topic}`)
+  switch (topic) {
+    // bhyve/device/{device_id}/zone/{station}/set
+    case (topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/) || {}).input:
+      let ajv = new Ajv()
+      const cmdSchema = {
+        'if': { 'properties': { 'state': { 'enum': ['ON', 'on'] } } },
+        'then': { 'required': ['time'] },
+        'properties': {
+          'time': {
+            'type': 'number',
+            'minimum': 1,
+            'maximum': 999
+          },
+          'state': {
+            'type': 'string',
+            'enum': ['ON', 'OFF', 'on', 'off']
           }
-        ]
+        }
       }
+      let JSONvalidate = ajv.compile(cmdSchema)
+      const found = topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/)
+      const deviceId = found[1]
+      const station = Number(found[2])
+      const command = JSON.parse(message.toString())
+      let CMD_VALID = JSONvalidate(command)
+      if (!CMD_VALID) {
+        throw new Error(JSON.stringify(JSONvalidate.errors))
+      }
+      let myJSON = {}
+      console.log(`${ts()} - deviceId: ` + deviceId + ' station: ' + station + ' command: ' + require('util').inspect(command))
+      switch (command.state.toLowerCase()) {
+        case 'on':
+          console.log(`${ts()} - in on`)
+          myJSON = { 'event': 'change_mode', 'mode': 'manual', 'device_id': deviceId, 'timestamp': ts(), 'stations': [ { 'station': station, 'run_time': command.time } ] }
+          break
+        case 'off':
+          console.log(`${ts()} - in off`)
+          myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
+          break
+        default:
+          console.log(`${ts()} - in default`)
+          myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
+          break
+      }
+      oClient.send(myJSON)
+      console.log(`${ts()} - myJSON: ` + JSON.stringify(myJSON))
       break
-    case 'off':
-      console.log('in off')
-      myJSON = {
-        'event': 'change_mode',
-        'device_id': deviceId,
-        'timestamp': ts(),
-        'mode': 'manual',
-        'stations': []
-      }
+    // bhyve/device/{device_id}/refresh
+    // to do: refresh individual device instead of all
+    // will require some work to orbit.js
+    case (topic.match(/bhyve\/device\/(.*)\/refresh/) || {}).input:
+    case 'bhyve/device/refresh':
+      console.log(`${ts()} - refresh`)
+      oClient.devices()
+      break
     default:
-      console.log('in default')
-      myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
+      console.log(`${ts()} - default: ${topic}`)
+      break
   }
-  oClient.send(myJSON)
-  console.log('myJSON: ' + JSON.stringify(myJSON))
 }
 
 mClient.on('message', (topic, message) => {
@@ -183,7 +187,7 @@ mClient.on('message', (topic, message) => {
 })
 
 oClient.on('error', (err) => {
-  console.log('Orbit Error: ' + err)
+  console.log(`${ts()} - Orbit Error: ` + err)
 })
 
 const parseMode = (data) => {
@@ -193,7 +197,7 @@ const parseMode = (data) => {
   // let deviceID = data.device_id
 
   for (let station in stations) {
-    console.log('station: ' + data.stations[station].station + 'mode: ' + mode + ' run_time: ' + data.stations[station].run_time)
+    console.log(`${ts()} - station: ` + data.stations[station].station + ' mode: ' + mode + ' run_time: ' + data.stations[station].run_time)
   }
 }
 
@@ -201,7 +205,7 @@ oClient.on('message', (data) => {
   console.log(`${ts()} - message: ` + JSON.stringify(data))
   let event = data.event
   if (MCLIENT_ONLINE) mClient.publish('bhyve/message', JSON.stringify(data))
-  console.log('event: ' + event)
+  console.log(`${ts()} - event: ` + event)
 
   switch (event) {
     case 'change_mode':
