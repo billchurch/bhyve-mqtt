@@ -1,6 +1,6 @@
 {
   "name": "bhyve-mqtt",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "A MQTT gateway for the unofficial Orbit B-Hyve API indended for use with HomeAssistant",
   "main": "app.js",
   "keywords": [

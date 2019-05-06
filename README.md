@@ -9,6 +9,7 @@ At this point, status and device informatin should be populated.
 ## Usage
 
 ```
+cd ./app
 cp .env-sample .env
 // fill out all the config details
 npm install
