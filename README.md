@@ -1,5 +1,5 @@
 #  bhyve-mqtt
-This app is designed to subscribe to the AmbientWeather Realtime API and broadcast the messages out over MQTT topics and is currently a work in progress. Any help is greatly appreciated.
+This app is designed to subscribe to the Orbit B-Hyve API and broadcast the messages out over MQTT topics and is currently a work in progress. Any help is greatly appreciated.
 
 At this point, status and device informatin should be populated.
 
