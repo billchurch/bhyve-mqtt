@@ -40,10 +40,11 @@ Schema changed from `bhyve/{deviceID}` to `bhyve/device/{deviceID}`
 * **bhyve/device/{deviceID}/details** - _json_ - A ridiculous amount of info, most important is list of zones for the device - **RETAINED**
 * **bhyve/device/{deviceID}/zone/{num}** - _json_ - Zone detail
 * **bhyve/device/{deviceID}/devices** - _json_ - List of devices
-* **bhyve/device/{deviceID}/message** - _json_ - Relay of event from the API example:
+* **bhyve/device/{deviceID}/message** - _json_ - Relay of event from the API for the device example:
 ```
 {"event":"change_mode","mode":"manual","program":null,"stations":[],"device_id":"ABC12345","timestamp":"2019-05-05T08:50:06.000Z"}`
 ```
+* **bhyve/message** - _json_ - Relay of event from the API
 
 ### Commands
 * **bhyve/device/{deviceID}/zone/{num}/set** - _json_ - `{ "state": "(ON|on|OFF|off)", "time": 12 }` - turns station on/off for _n_ minutes. `time` is not used/ignored for `OFF` state but is required for `ON` state. Examples:

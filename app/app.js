@@ -205,7 +205,13 @@ oClient.on('message', (data) => {
   const json = JSON.stringify(data)
   console.log(`${ts()} - message: ` + json)
   let event = data.event
-  if (MCLIENT_ONLINE) mClient.publish(`bhyve/device/${data.device_id}/message`, json)
+  if (MCLIENT_ONLINE) {
+    if (data.device_id) {
+      mClient.publish(`bhyve/device/${data.device_id}/message`, json)
+    } else {
+      mClient.publish(`bhyve/message`, json) 
+    }
+  }
   console.log(`${ts()} - event: ` + event)
 
   switch (event) {
