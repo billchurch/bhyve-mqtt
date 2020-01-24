@@ -47,14 +47,18 @@ let publishHandler = function (err) {
   // console.log(`${ts()} - mqtt publish`)
 }
 
-// connect to oClient once mqtt is up:
-mClient.on('connect', function () {
-  console.log(`${ts()} - mqtt connected`)
-  MCLIENT_ONLINE = true
+const oConnect = () => {
   oClient.connect({
     email: process.env.ORBIT_EMAIL,
     password: process.env.ORBIT_PASSWORD
   })
+}
+
+// connect to oClient once mqtt is up:
+mClient.on('connect', function () {
+  console.log(`${ts()} - mqtt connected`)
+  MCLIENT_ONLINE = true
+  oConnect()
 })
 
 // once we get a token, publish alive message

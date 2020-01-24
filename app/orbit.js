@@ -6,6 +6,9 @@
  * Bill Church - https://github.com/billchurch/bhyve-mqtt
  *
  */
+
+//todo implement https://github.com/websockets/ws/wiki/client-auto-reconnect-with-ping-listener---exponential-back-off-timeout
+
 const axios = require('axios')
 const EventEmitter = require('events').EventEmitter
 const inherits = require('util').inherits
