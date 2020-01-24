@@ -202,9 +202,16 @@ const parseMode = (data) => {
 }
 
 oClient.on('message', (data) => {
-  console.log(`${ts()} - message: ` + JSON.stringify(data))
+  const json = JSON.stringify(data)
+  console.log(`${ts()} - message: ` + json)
   let event = data.event
-  if (MCLIENT_ONLINE) mClient.publish('bhyve/message', JSON.stringify(data))
+  if (MCLIENT_ONLINE) {
+    if (data.device_id) {
+      mClient.publish(`bhyve/device/${data.device_id}/message`, json)
+    } else {
+      mClient.publish(`bhyve/message`, json) 
+    }
+  }
   console.log(`${ts()} - event: ` + event)
 
   switch (event) {
