@@ -9,6 +9,7 @@
 const Ajv = require('ajv')
 const Orbit = require('./orbit')
 const mqtt = require('mqtt')
+require('dotenv').config()
 
 var MCLIENT_ONLINE = false
 let ts = () => new Date().toISOString()

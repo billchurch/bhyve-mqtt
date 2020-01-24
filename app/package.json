@@ -16,13 +16,13 @@
   "author": "bill church",
   "license": "MIT",
   "dependencies": {
-    "ajv": "^6.10.0",
-    "axios": "^0.18.0",
-    "dotenv": "^6.0.0",
-    "mqtt": "^2.18.0",
-    "ws": "^6.1.4"
+    "ajv": "^6.11.0",
+    "axios": "^0.19.2",
+    "dotenv": "^8.2.0",
+    "mqtt": "^3.0.0",
+    "ws": "^7.2.1"
   },
   "devDependencies": {
-    "standard": "^12.0.1"
+    "standard": "^14.3.1"
   }
 }
