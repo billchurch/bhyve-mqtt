@@ -60,4 +60,14 @@ bhyve/device/ABC12345/zone/2/set
 ```
 * **bhyve/device/refresh** - casues all devices to refresh details
 * **bhyve/device/{deviceID}/refresh** - casues individual device to refresh details (not yet implemented)
-
+* **bhyve/set** - _json_ - sends a raw JSON command. Examples:
+```
+// set a 24 hour rain delay
+bhyve/set
+{"event":"rain_delay","delay":24,"device_id":"XXXXXX","timestamp":"2020-02-05T14:00:00.000Z"}
+```
+```
+// clear/cancel rain delay
+bhyve/set
+{"event":"rain_delay","delay":0,"device_id":"XXXXXX","timestamp":"2020-02-05T14:00:00.000Z"}
+```
