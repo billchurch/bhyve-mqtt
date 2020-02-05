@@ -90,6 +90,7 @@ let subscribeHandler = function (topic) {
 oClient.on('devices', (data) => {
   if (MCLIENT_ONLINE) {
     let devices = []
+    subscribeHandler(`bhyve/set`)
     subscribeHandler(`bhyve/device/refresh`)
     for (let prop in data) {
       if (data.hasOwnProperty(prop)) {
@@ -173,6 +174,10 @@ const parseMessage = (topic, message) => {
     case 'bhyve/device/refresh':
       console.log(`${ts()} - refresh`)
       oClient.devices()
+      break
+    case 'bhyve/set':
+      oClient.send(JSON.parse(message.toString()))
+      console.log(`${ts()} - set: ${message}`)
       break
     default:
       console.log(`${ts()} - default: ${topic}`)
