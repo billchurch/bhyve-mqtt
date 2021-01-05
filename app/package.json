@@ -17,7 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "ajv": "^6.11.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "dotenv": "^8.2.0",
     "mqtt": "^3.0.0",
     "ws": "^7.2.1"
