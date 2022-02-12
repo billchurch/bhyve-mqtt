@@ -16,7 +16,7 @@
   "author": "bill church",
   "license": "MIT",
   "dependencies": {
-    "ajv": "^6.11.0",
+    "ajv": "^6.12.3",
     "axios": "^0.19.2",
     "dotenv": "^8.2.0",
     "mqtt": "^3.0.0",
