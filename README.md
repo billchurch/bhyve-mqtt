@@ -16,6 +16,13 @@ npm install
 npm start
 ```
 
+## Docker Usage
+Pretty simple, use [app/.env-sample](app/.env-sample) as a template and call docker accordingly:
+
+```
+docker run --env-file myenvfile bhyve-mqtt
+```
+
 ## Environment Configuration
 
 | key                  | description                                                                |
