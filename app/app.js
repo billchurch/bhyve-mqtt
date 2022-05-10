@@ -101,26 +101,27 @@ orbitClient.on('devices', (data) => {
     devices.push(deviceId)
     console.log(`${ts()} - devices: ` + JSON.stringify(data[prop]))
 
-    if (typeof data[prop].status.watering_status === 'object') {
-      mqttClient.publish(`bhyve/device/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
-      console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
-    } else {
-      mqttClient.publish(`bhyve/device/${deviceId}/status`, null)
-      console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status))
-    }
+    // Publish device status. If a current operation is underway watering_status will be an object
+    // otherwise it will be empty / null
+    let deviceStatus = []
+    if (typeof data[prop].status.watering_status === 'object') deviceStatus = JSON.stringify(data[prop].status.watering_status)
+    mqttClient.publish(`bhyve/device/${deviceId}/status`, deviceStatus)
+    console.log(`${ts()} - status: ${deviceStatus}`)
 
     subscribeHandler(`bhyve/device/${deviceId}/refresh`)
     mqttClient.publish(`bhyve/device/${deviceId}/details`, JSON.stringify(data[prop]), { retain: true })
 
+    // enumerate zones for device and publish
     for (let zone in data[prop].zones) {
       let station = data[prop].zones[zone].station
-      mqttClient.publish(`bhyve/device/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
+      
       subscribeHandler(`bhyve/device/${deviceId}/zone/${station}/set`)
+      mqttClient.publish(`bhyve/device/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
     }
 
   }
+  
   mqttClient.publish(`bhyve/devices`, JSON.stringify(devices))
-
   orbitClient.connectStream()
 })
 
@@ -239,6 +240,7 @@ orbitClient.on('message', (data) => {
 
 const handleSignal = (signal) => {
   console.log(`${ts()} - event: ${signal}, shutting down`)
+  if (mqttClient) mqttClient.end
   process.exit(1)
 }
 
