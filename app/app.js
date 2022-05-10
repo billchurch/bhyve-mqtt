@@ -11,12 +11,12 @@ const Orbit = require('./orbit')
 const mqtt = require('mqtt')
 require('dotenv').config()
 
-var MCLIENT_ONLINE = false
+var MQTTCLIENT_ONLINE = false
 let ts = () => new Date().toISOString()
 
-const oClient = new Orbit()
+const orbitClient = new Orbit()
 
-const mClient = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, {
+const mqttClient = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, {
   username: process.env.MQTT_USER,
   password: process.env.MQTT_PASSWORD,
   keepalive: 10000,
@@ -33,11 +33,11 @@ const handleClientError = function (err) {
   }, 10000)
 }
 
-mClient.on('error', handleClientError)
+mqttClient.on('error', handleClientError)
 
-mClient.on('offline', function () {
+mqttClient.on('offline', function () {
   console.log(`${ts()} - BROKER OFFLINE`)
-  MCLIENT_ONLINE = false
+  MQTTCLIENT_ONLINE = false
 })
 
 let publishHandler = function (err) {
@@ -47,74 +47,81 @@ let publishHandler = function (err) {
   // console.log(`${ts()} - mqtt publish`)
 }
 
-const oConnect = () => {
-  oClient.connect({
+const orbitConnect = () => {
+  orbitClient.connect({
     email: process.env.ORBIT_EMAIL,
     password: process.env.ORBIT_PASSWORD
   })
 }
 
-// connect to oClient once mqtt is up:
-mClient.on('connect', function () {
+// connect to orbitClient once mqtt is up:
+mqttClient.on('connect', function () {
   console.log(`${ts()} - mqtt connected`)
-  MCLIENT_ONLINE = true
-  oConnect()
+  MQTTCLIENT_ONLINE = true
+  orbitConnect()
 })
 
 // once we get a token, publish alive message
-oClient.on('token', (token) => {
-  if (MCLIENT_ONLINE) mClient.publish('bhyve/alive', ts(), publishHandler)
+orbitClient.on('token', (token) => {
+  if (MQTTCLIENT_ONLINE) mqttClient.publish('bhyve/alive', ts(), publishHandler)
   console.log(`${ts()} - Token: ${token}`)
 })
 
-oClient.on('user_id', (userId) => {
+orbitClient.on('user_id', (userId) => {
   console.log(`${ts()} - user_id: ${userId}`)
-  oClient.devices()
+  orbitClient.devices()
 })
 
-oClient.on('device_id', (deviceId) => {
+orbitClient.on('device_id', (deviceId) => {
   console.log(`${ts()} - device_id: ${deviceId}`)
 })
 
 let subscribeHandler = function (topic) {
   console.log(`${ts()} - subscribe topic: ` + topic)
-  mClient.subscribe(topic, (err, granted) => {
+  mqttClient.subscribe(topic, (err, granted) => {
     if (err) {
-      console.error(`mClient.subscribe ${topic} error:`)
+      console.error(`mqttClient.subscribe ${topic} error:`)
       console.error('    ' + err)
     }
     console.log(`${ts()} - granted: ` + JSON.stringify(granted))
   })
 }
 
-oClient.on('devices', (data) => {
-  if (MCLIENT_ONLINE) {
-    let devices = []
-    subscribeHandler(`bhyve/device/refresh`)
-    for (let prop in data) {
-      if (data.hasOwnProperty(prop)) {
-        let deviceId = data[prop].id
-        devices.push(deviceId)
-        console.log(`${ts()} - devices: ` + JSON.stringify(data[prop]))
-        if (typeof data[prop].status.watering_status === 'object') {
-          mClient.publish(`bhyve/device/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
-        } else {
-          mClient.publish(`bhyve/device/${deviceId}/status`, null)
-        }
-        console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
-        subscribeHandler(`bhyve/device/${deviceId}/refresh`)
-        mClient.publish(`bhyve/device/${deviceId}/details`, JSON.stringify(data[prop]), { retain: true })
-        for (let zone in data[prop].zones) {
-          let station = data[prop].zones[zone].station
-          mClient.publish(`bhyve/device/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
-          subscribeHandler(`bhyve/device/${deviceId}/zone/${station}/set`)
-        }
-      }
-    }
-    mClient.publish(`bhyve/devices`, JSON.stringify(devices))
+orbitClient.on('devices', (data) => {
+  if (!MQTTCLIENT_ONLINE) return
 
-    oClient.connectStream()
+  let devices = []
+  subscribeHandler(`bhyve/device/refresh`)
+
+  for (let prop in data) {
+
+    if (!data.hasOwnProperty(prop)) continue
+
+    let deviceId = data[prop].id
+    devices.push(deviceId)
+    console.log(`${ts()} - devices: ` + JSON.stringify(data[prop]))
+
+    if (typeof data[prop].status.watering_status === 'object') {
+      mqttClient.publish(`bhyve/device/${deviceId}/status`, JSON.stringify(data[prop].status.watering_status))
+      console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status.watering_status))
+    } else {
+      mqttClient.publish(`bhyve/device/${deviceId}/status`, null)
+      console.log(`${ts()} - status: ` + JSON.stringify(data[prop].status))
+    }
+
+    subscribeHandler(`bhyve/device/${deviceId}/refresh`)
+    mqttClient.publish(`bhyve/device/${deviceId}/details`, JSON.stringify(data[prop]), { retain: true })
+
+    for (let zone in data[prop].zones) {
+      let station = data[prop].zones[zone].station
+      mqttClient.publish(`bhyve/device/${deviceId}/zone/${station}`, JSON.stringify(data[prop].zones[zone]))
+      subscribeHandler(`bhyve/device/${deviceId}/zone/${station}/set`)
+    }
+
   }
+  mqttClient.publish(`bhyve/devices`, JSON.stringify(devices))
+
+  orbitClient.connectStream()
 })
 
 const parseMessage = (topic, message) => {
@@ -151,19 +158,16 @@ const parseMessage = (topic, message) => {
       console.log(`${ts()} - deviceId: ` + deviceId + ' station: ' + station + ' command: ' + require('util').inspect(command))
       switch (command.state.toLowerCase()) {
         case 'on':
-          console.log(`${ts()} - in on`)
           myJSON = { 'event': 'change_mode', 'mode': 'manual', 'device_id': deviceId, 'timestamp': ts(), 'stations': [ { 'station': station, 'run_time': command.time } ] }
           break
         case 'off':
-          console.log(`${ts()} - in off`)
           myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
           break
         default:
-          console.log(`${ts()} - in default`)
           myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
           break
       }
-      oClient.send(myJSON)
+      orbitClient.send(myJSON)
       console.log(`${ts()} - myJSON: ` + JSON.stringify(myJSON))
       break
     // bhyve/device/{device_id}/refresh
@@ -172,7 +176,7 @@ const parseMessage = (topic, message) => {
     case (topic.match(/bhyve\/device\/(.*)\/refresh/) || {}).input:
     case 'bhyve/device/refresh':
       console.log(`${ts()} - refresh`)
-      oClient.devices()
+      orbitClient.devices()
       break
     default:
       console.log(`${ts()} - default: ${topic}`)
@@ -180,7 +184,7 @@ const parseMessage = (topic, message) => {
   }
 }
 
-mClient.on('message', (topic, message) => {
+mqttClient.on('message', (topic, message) => {
   // console.log('topic: ' + topic + ' message: ' + message.toString())
   try {
     parseMessage(topic, message)
@@ -191,7 +195,7 @@ mClient.on('message', (topic, message) => {
   }
 })
 
-oClient.on('error', (err) => {
+orbitClient.on('error', (err) => {
   console.log(`${ts()} - Orbit Error: ` + err)
 })
 
@@ -206,15 +210,15 @@ const parseMode = (data) => {
   }
 }
 
-oClient.on('message', (data) => {
+orbitClient.on('message', (data) => {
   const json = JSON.stringify(data)
   console.log(`${ts()} - message: ` + json)
   let event = data.event
-  if (MCLIENT_ONLINE) {
+  if (MQTTCLIENT_ONLINE) {
     if (data.device_id) {
-      mClient.publish(`bhyve/device/${data.device_id}/message`, json)
+      mqttClient.publish(`bhyve/device/${data.device_id}/message`, json)
     } else {
-      mClient.publish(`bhyve/message`, json) 
+      mqttClient.publish(`bhyve/message`, json) 
     }
   }
   console.log(`${ts()} - event: ` + event)
@@ -232,3 +236,13 @@ oClient.on('message', (data) => {
       console.log(`${ts()} - message: ` + JSON.stringify(data))
   }
 })
+
+const handleSignal = (signal) => {
+  console.log(`${ts()} - event: ${signal}, shutting down`)
+  process.exit(1)
+}
+
+const signals = ['SIGTERM', 'SIGINT'];
+signals.forEach((signal) =>
+  process.on(signal, handleSignal)
+)
