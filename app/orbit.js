@@ -166,7 +166,7 @@ Client.prototype.connectStream = function () {
   })
 
   self._stream.on('unexpected-response', function (request, response) {
-    console.error(`${ts()} - unexpected-response / request: ` + request + ' response: ' + response)
+    console.error(`${ts()} - unexpected-response / request: ` + JSON.stringify(request) + ' response: ' + JSON.stringify(response))
   })
 }
 
