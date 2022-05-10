@@ -15,7 +15,8 @@
   "scripts": {
     "start": "node -r dotenv/config app.js dotenv_config_path=./.env",
     "cleanmac": "find . -name '.DS_Store' -type f -delete",
-    "standard": "standard --verbose --fix"
+    "standard": "standard --verbose --fix",
+    "release": "standard-version"
   },
   "author": "bill church",
   "license": "MIT",
