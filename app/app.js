@@ -22,7 +22,7 @@ const mqttClient = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, {
   keepalive: 10000,
   connectTimeout: 120000,
   reconnectPeriod: 1000,
-  clientId: 'bhyve-mqtt_' + Math.random().toString(16).substr(2, 8),
+  clientId: 'bhyve-mqtt_' + Math.random().toString(16).substring(2, 8),
   will: {
     topic: "bhyve/online",
     payload: "false",
