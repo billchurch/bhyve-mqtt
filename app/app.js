@@ -219,7 +219,9 @@ const parseMessage = (topic, message) => {
 
 const handleSignal = (signal) => {
   console.log(`${ts()} - event: ${signal}, shutting down`)
-  if (mqttClient) mqttClient.end
+  if (mqttClient) {
+    mqttClient.end
+  }
   process.exit(1)
 }
 
