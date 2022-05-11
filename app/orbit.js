@@ -33,16 +33,22 @@ function Client () {
 }
 inherits(Client, EventEmitter)
 
+const normalizeConfig = (cfg) => {
+  var config = []
+  config.baseURL = cfg.baseURL || 'https://api.orbitbhyve.com'
+  config.timeout = cfg.timeout || 10000
+  config.email = cfg.email || undefined
+  config.password = cfg.password || undefined
+  config.debug = cfg.debug || false
+  config.wssURL = cfg.wssURL || 'wss://api.orbitbhyve.com/v1/events'
+  config.wsTimeout = cfg.wsTimeout || 10000
+  config.debug = cfg.debug || false
+  return config
+
+}
 // first step, get a token and generate an event on success or fail
 Client.prototype.connect = function (cfg) {
-  this.config.baseURL = cfg.baseURL || 'https://api.orbitbhyve.com'
-  this.config.timeout = cfg.timeout || 10000
-  this.config.email = cfg.email || undefined
-  this.config.password = cfg.password || undefined
-  this.config.debug = cfg.debug || false
-  this.config.wssURL = cfg.wssURL || 'wss://api.orbitbhyve.com/v1/events'
-  this.config.wsTimeout = cfg.wsTimeout || 10000
-  this.config.debug = cfg.debug || false
+  this.config = normalizeConfig(cfg)
   var self = this
 
   const getOrbitToken = () => {
