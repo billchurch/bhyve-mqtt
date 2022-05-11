@@ -40,19 +40,16 @@ mqttClient.on('offline', function () {
   MQTTCLIENT_ONLINE = false
 })
 
-let publishHandler = function (err) {
-  if (err) {
-    return console.error(err)
+mqttClient.on('message', (topic, message) => {
+  // console.log('topic: ' + topic + ' message: ' + message.toString())
+  try {
+    parseMessage(topic, message)
+  } catch (e) {
+    console.log(`${ts()} parseMessage ERROR: JSONvalidate failed: `)
+    console.log('    validation error: ' + e)
+    console.log('    client message: ' + message.toString())
   }
-  // console.log(`${ts()} - mqtt publish`)
-}
-
-const orbitConnect = () => {
-  orbitClient.connect({
-    email: process.env.ORBIT_EMAIL,
-    password: process.env.ORBIT_PASSWORD
-  })
-}
+})
 
 // connect to orbitClient once mqtt is up:
 mqttClient.on('connect', function () {
@@ -60,6 +57,13 @@ mqttClient.on('connect', function () {
   MQTTCLIENT_ONLINE = true
   orbitConnect()
 })
+
+const orbitConnect = () => {
+  orbitClient.connect({
+    email: process.env.ORBIT_EMAIL,
+    password: process.env.ORBIT_PASSWORD
+  })
+}
 
 // once we get a token, publish alive message
 orbitClient.on('token', (token) => {
@@ -76,17 +80,6 @@ orbitClient.on('device_id', (deviceId) => {
   console.log(`${ts()} - device_id: ${deviceId}`)
 })
 
-let subscribeHandler = function (topic) {
-  console.log(`${ts()} - subscribe topic: ` + topic)
-  mqttClient.subscribe(topic, (err, granted) => {
-    if (err) {
-      console.error(`mqttClient.subscribe ${topic} error:`)
-      console.error('    ' + err)
-    }
-    console.log(`${ts()} - granted: ` + JSON.stringify(granted))
-  })
-}
-
 orbitClient.on('devices', (data) => {
   if (!MQTTCLIENT_ONLINE) return
 
@@ -94,7 +87,6 @@ orbitClient.on('devices', (data) => {
   subscribeHandler(`bhyve/device/refresh`)
 
   for (let prop in data) {
-
     if (!data.hasOwnProperty(prop)) continue
 
     let deviceId = data[prop].id
@@ -125,12 +117,49 @@ orbitClient.on('devices', (data) => {
   orbitClient.connectStream()
 })
 
+orbitClient.on('error', (err) => {
+  console.log(`${ts()} - Orbit Error: ` + err)
+})
+
+orbitClient.on('message', (data) => {
+  const json = JSON.stringify(data)
+  console.log(`${ts()} - message: ` + json)
+  let event = data.event
+  if (MQTTCLIENT_ONLINE) {
+    if (data.device_id) {
+      mqttClient.publish(`bhyve/device/${data.device_id}/message`, json)
+    } else {
+      mqttClient.publish(`bhyve/message`, json) 
+    }
+  }
+  console.log(`${ts()} - event: ` + event)
+})
+
+let publishHandler = function (err) {
+  if (err) {
+    return console.error(err)
+  }
+  // console.log(`${ts()} - mqtt publish`)
+}
+
+let subscribeHandler = function (topic) {
+  console.log(`${ts()} - subscribe topic: ` + topic)
+  mqttClient.subscribe(topic, (err, granted) => {
+    if (err) {
+      console.error(`mqttClient.subscribe ${topic} error:`)
+      console.error('    ' + err)
+    }
+    console.log(`${ts()} - granted: ` + JSON.stringify(granted))
+  })
+}
+
 const parseMessage = (topic, message) => {
   console.log(`${ts()} - parseMessage topic: ${topic}`)
   switch (topic) {
     // bhyve/device/{device_id}/zone/{station}/set
     case (topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/) || {}).input:
       let ajv = new Ajv()
+      // validate JSON schema
       const cmdSchema = {
         'if': { 'properties': { 'state': { 'enum': ['ON', 'on'] } } },
         'then': { 'required': ['time'] },
@@ -152,19 +181,14 @@ const parseMessage = (topic, message) => {
       const station = Number(found[2])
       const command = JSON.parse(message.toString())
       let CMD_VALID = JSONvalidate(command)
-      if (!CMD_VALID) {
-        throw new Error(JSON.stringify(JSONvalidate.errors))
-      }
+      if (!CMD_VALID) throw new Error(JSON.stringify(JSONvalidate.errors))
       let myJSON = {}
       console.log(`${ts()} - deviceId: ` + deviceId + ' station: ' + station + ' command: ' + require('util').inspect(command))
       switch (command.state.toLowerCase()) {
         case 'on':
           myJSON = { 'event': 'change_mode', 'mode': 'manual', 'device_id': deviceId, 'timestamp': ts(), 'stations': [ { 'station': station, 'run_time': command.time } ] }
           break
-        case 'off':
-          myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
-          break
-        default:
+        case 'off': default:
           myJSON = { 'event': 'change_mode', 'device_id': deviceId, 'timestamp': ts(), 'mode': 'manual', 'stations': [] }
           break
       }
@@ -184,59 +208,6 @@ const parseMessage = (topic, message) => {
       break
   }
 }
-
-mqttClient.on('message', (topic, message) => {
-  // console.log('topic: ' + topic + ' message: ' + message.toString())
-  try {
-    parseMessage(topic, message)
-  } catch (e) {
-    console.log(`${ts()} parseMessage ERROR: JSONvalidate failed: `)
-    console.log('    validation error: ' + e)
-    console.log('    client message: ' + message.toString())
-  }
-})
-
-orbitClient.on('error', (err) => {
-  console.log(`${ts()} - Orbit Error: ` + err)
-})
-
-const parseMode = (data) => {
-  let mode = data.mode
-  // let program = data.program
-  let stations = data.stations
-  // let deviceID = data.device_id
-
-  for (let station in stations) {
-    console.log(`${ts()} - station: ` + data.stations[station].station + ' mode: ' + mode + ' run_time: ' + data.stations[station].run_time)
-  }
-}
-
-orbitClient.on('message', (data) => {
-  const json = JSON.stringify(data)
-  console.log(`${ts()} - message: ` + json)
-  let event = data.event
-  if (MQTTCLIENT_ONLINE) {
-    if (data.device_id) {
-      mqttClient.publish(`bhyve/device/${data.device_id}/message`, json)
-    } else {
-      mqttClient.publish(`bhyve/message`, json) 
-    }
-  }
-  console.log(`${ts()} - event: ` + event)
-
-  switch (event) {
-    case 'change_mode':
-
-      parseMode(data)
-      break
-      //    case 'watering_in_progress_notification':
-      //      break
-
-    default:
-
-      console.log(`${ts()} - message: ` + JSON.stringify(data))
-  }
-})
 
 const handleSignal = (signal) => {
   console.log(`${ts()} - event: ${signal}, shutting down`)
