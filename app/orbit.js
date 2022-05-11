@@ -75,7 +75,7 @@ Client.prototype.connect = function (cfg) {
     })
   }
 
-  const doAccept = (response) => {
+  const doAccept = () => {
     if (self.config.debug) console.log(`${ts()} - token: ` + self._token + ' My UserID: ' + self._user_id)
     self.emit('token', self._token)
     self.emit('user_id', self._user_id)
