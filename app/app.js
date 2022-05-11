@@ -21,8 +21,14 @@ const mqttClient = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, {
   password: process.env.MQTT_PASSWORD,
   keepalive: 10000,
   connectTimeout: 120000,
-  reconnectPeriod: 500,
-  clientId: 'bhyve-mqtt_' + Math.random().toString(16).substr(2, 8)
+  reconnectPeriod: 1000,
+  clientId: 'bhyve-mqtt_' + Math.random().toString(16).substr(2, 8),
+  will: {
+    topic: "bhyve/online",
+    payload: "false",
+    qos: 0,
+    retain: true
+  }
 })
 
 const handleClientError = function (err) {
@@ -68,6 +74,8 @@ const orbitConnect = () => {
 // once we get a token, publish alive message
 orbitClient.on('token', (token) => {
   if (MQTTCLIENT_ONLINE) mqttClient.publish('bhyve/alive', ts(), publishHandler)
+  if (MQTTCLIENT_ONLINE) mqttClient.publish('bhyve/online', "true", { qos: 0, retain: true }, publishHandler)
+
   console.log(`${ts()} - Token: ${token}`)
 })
 
