@@ -30,9 +30,9 @@ docker run --env-file myenvfile bhyve-mqtt
 | MQTT_BROKER_ADDRESS  | MQTT broker URL (eg. `mqtt://localhost:1883`)                              |
 | ORBIT_EMAIL          | Broker user                                                                |
 | MQTT_PASSWORD        | Broker password                                                            |
-| MQTT_UPDATE_TOPIC    | Broker topic for realtime updates from AmbientWeather                      |
-| MQTT_CONNECT_TOPIC   | Broker topic for initial connections to the AmbientWeather Realtime socket |
-| MQTT_SUBSCRIBE_TOPIC | Broker topic for successful subscription to the realtime API               |
+| MQTT_UPDATE_TOPIC    | Broker topic for realtime updates from bhyve-mqtt                          |
+| MQTT_CONNECT_TOPIC   | Broker topic for initial connections to the bhyve-mqtt socket              |
+| MQTT_SUBSCRIBE_TOPIC | Broker topic for successful subscription to the bhyve-mqtt API             |
 
 
 ## MQTT Schema
