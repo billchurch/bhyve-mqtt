@@ -9,8 +9,8 @@
 	"mounts": [
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh/personal_id_rsa.pub,target=/home/vscode/.hostssh/id_rsa.pub,readonly,type=bind,consistency=cached"
 	],
-		"features": {
-		"ghcr.io/devcontainers/features/git-lfs:1": {}
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/node-asdf:0": {},
 	},
 	"customizations": {
 		"vscode": {
