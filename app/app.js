@@ -103,7 +103,7 @@ orbitClient.on('devices', (data) => {
 
     // Publish device status. If a current operation is underway watering_status will be an object
     // otherwise it will be empty / null
-    let deviceStatus = []
+    let deviceStatus = ''
     if (typeof data[prop].status.watering_status === 'object') deviceStatus = JSON.stringify(data[prop].status.watering_status)
     mqttClient.publish(`bhyve/device/${deviceId}/status`, deviceStatus)
     console.log(`${ts()} - status: ${deviceStatus}`)
