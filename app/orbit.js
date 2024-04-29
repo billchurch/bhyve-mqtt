@@ -7,13 +7,13 @@
  *
  */
 
-//todo implement https://github.com/websockets/ws/wiki/client-auto-reconnect-with-ping-listener---exponential-back-off-timeout
+// todo implement https://github.com/websockets/ws/wiki/client-auto-reconnect-with-ping-listener---exponential-back-off-timeout
 
 const axios = require('axios')
 const EventEmitter = require('events').EventEmitter
 const inherits = require('util').inherits
 const WebSocket = require('ws')
-let ts = () => new Date().toISOString()
+const ts = () => new Date().toISOString()
 
 function Client () {
   if (!(this instanceof Client)) { return new Client() }
@@ -34,7 +34,7 @@ function Client () {
 inherits(Client, EventEmitter)
 
 const normalizeConfig = (cfg) => {
-  var config = []
+  const config = []
   config.baseURL = cfg.baseURL || 'https://api.orbitbhyve.com'
   config.timeout = cfg.timeout || 10000
   config.email = cfg.email || undefined
@@ -44,12 +44,11 @@ const normalizeConfig = (cfg) => {
   config.wsTimeout = cfg.wsTimeout || 10000
   config.debug = cfg.debug || false
   return config
-
 }
 // first step, get a token and generate an event on success or fail
 Client.prototype.connect = function (cfg) {
   this.config = normalizeConfig(cfg)
-  var self = this
+  const self = this
 
   const getOrbitToken = () => {
     return new Promise((resolve, reject) => {
@@ -58,9 +57,9 @@ Client.prototype.connect = function (cfg) {
         timeout: self.config.timeout
       })
       instance.post('/v1/session', {
-        'session': {
-          'email': self.config.email,
-          'password': self.config.password
+        session: {
+          email: self.config.email,
+          password: self.config.password
         }
       }).then(function (response) {
         self._token = response.data.orbit_session_token
@@ -85,13 +84,13 @@ Client.prototype.connect = function (cfg) {
     self.emit('error', err)
   }
 
-  let ost = getOrbitToken()
+  const ost = getOrbitToken()
   ost.then(doAccept)
     .catch(doReject)
 }
 
 Client.prototype.devices = function () {
-  var self = this
+  const self = this
 
   const getDevices = () => {
     return new Promise((resolve, reject) => {
@@ -117,20 +116,20 @@ Client.prototype.devices = function () {
     self.emit('error', err)
   }
 
-  let Devices = getDevices()
+  const Devices = getDevices()
   Devices.then(doAccept)
     .catch(doReject)
 }
 
 Client.prototype.send = function (message) {
-  var self = this
+  const self = this
 
   self._stream.send(JSON.stringify(message))
   console.log('send json: ' + JSON.stringify(message))
 }
 
 Client.prototype.connectStream = function () {
-  var self = this
+  const self = this
 
   self._stream = new WebSocket(self.config.wssURL, {
     handshakeTimeout: self.config.wsTimeout
@@ -142,9 +141,9 @@ Client.prototype.connectStream = function () {
   }
 
   const authenticate = () => {
-    let message = {
-      'event': 'app_connection',
-      'orbit_session_token': self._token
+    const message = {
+      event: 'app_connection',
+      orbit_session_token: self._token
     }
 
     if (self.config.debug) console.log(`${ts()} - websocket authenticate message: ` + JSON.stringify(message))

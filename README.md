@@ -3,6 +3,9 @@ This app is designed to subscribe to the Orbit B-Hyve API and broadcast the mess
 
 At this point, status and device information should be populated.
 
+## Requirements
+- Node v16 or highter
+
 ## To Do
 - Handle commands from MQTT to Orbit API (start/stop watering, settings schedules, etc...)
 

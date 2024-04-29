@@ -15,7 +15,6 @@
   "scripts": {
     "start": "node app.js",
     "cleanmac": "find . -name '.DS_Store' -type f -delete",
-    "standard": "standard --verbose --fix",
     "release": "standard-version"
   },
   "author": "bill church",
@@ -37,7 +36,6 @@
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.8.8",
-    "standard": "^17.1.0",
     "standard-version": "^9.5.0"
   }
 }
