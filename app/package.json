@@ -12,6 +12,9 @@
     "homeassistant",
     "mqtt"
   ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "scripts": {
     "start": "node app.js",
     "cleanmac": "find . -name '.DS_Store' -type f -delete",
@@ -30,10 +33,9 @@
   "devDependencies": {
     "eslint": "^8.57.0",
     "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-node": "^4.1.0",
     "eslint-config-prettier": "^8.10.0",
     "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-n": "^17.3.1",
     "eslint-plugin-prettier": "^4.2.1",
     "prettier": "^2.8.8",
     "standard-version": "^9.5.0"
