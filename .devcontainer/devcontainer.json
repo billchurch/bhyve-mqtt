@@ -11,6 +11,7 @@
 	],
 	"features": {
 		"ghcr.io/devcontainers-contrib/features/node-asdf:0": {},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
 	},
 	"customizations": {
 		"vscode": {
