@@ -7,77 +7,55 @@
  *
  */
 const Ajv = require('ajv')
-const Orbit = require('./orbit')
-const mqtt = require('mqtt')
-require('dotenv').config()
+const Orbit = require('./orbit');
+const mqttClientModule = require('./mqttClient'); // Import the module
+const orbitClient = new Orbit();
+require('dotenv').config();
 
-var MQTTCLIENT_ONLINE = false
-let ts = () => new Date().toISOString()
+let MQTTCLIENT_ONLINE = false;
+const ts = () => new Date().toISOString();
 
-const orbitClient = new Orbit()
+// Use the function from mqttClient.js to create the MQTT client
+const mqttClient = mqttClientModule.createMqttClient();
 
-const mqttClient = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, {
-  username: process.env.MQTT_USER,
-  password: process.env.MQTT_PASSWORD,
-  keepalive: 10000,
-  connectTimeout: 120000,
-  reconnectPeriod: 1000,
-  clientId: 'bhyve-mqtt_' + Math.random().toString(16).substring(2, 8),
-  will: {
-    topic: "bhyve/online",
-    payload: "false",
-    qos: 0,
-    retain: true
+const publishHandler = function (err) {
+  if (err) {
+    console.error(`${ts()} - mqtt publish error: ${err}`);
+  } else {
+    console.log(`${ts()} - mqtt publish successful`);
   }
-})
+};
 
-const handleClientError = function (err) {
-  console.error(`${ts()} - connection error to broker, exiting`)
-  console.error('    ' + err)
-  setTimeout(() => {
-    process.exit()
-  }, 10000)
-}
-
-mqttClient.on('error', handleClientError)
-
-mqttClient.on('offline', function () {
-  console.log(`${ts()} - BROKER OFFLINE`)
-  MQTTCLIENT_ONLINE = false
-})
+mqttClient.on('connect', function () {
+  console.log(`${ts()} - mqtt connected`);
+  MQTTCLIENT_ONLINE = true;
+  orbitConnect();
+});
 
 mqttClient.on('message', (topic, message) => {
-  // console.log('topic: ' + topic + ' message: ' + message.toString())
   try {
-    parseMessage(topic, message)
+    parseMessage(topic, message);
   } catch (e) {
-    console.log(`${ts()} parseMessage ERROR: JSONvalidate failed: `)
-    console.log('    validation error: ' + e)
-    console.log('    client message: ' + message.toString())
+    console.log(`${ts()} parseMessage ERROR: JSON validate failed: `);
+    console.log('    validation error: ' + e);
+    console.log('    client message: ' + message.toString());
   }
-})
-
-// connect to orbitClient once mqtt is up:
-mqttClient.on('connect', function () {
-  console.log(`${ts()} - mqtt connected`)
-  MQTTCLIENT_ONLINE = true
-  orbitConnect()
-})
+});
 
 const orbitConnect = () => {
   orbitClient.connect({
     email: process.env.ORBIT_EMAIL,
     password: process.env.ORBIT_PASSWORD
-  })
-}
+  });
+};
 
-// once we get a token, publish alive message
 orbitClient.on('token', (token) => {
-  if (MQTTCLIENT_ONLINE) mqttClient.publish('bhyve/alive', ts(), publishHandler)
-  if (MQTTCLIENT_ONLINE) mqttClient.publish('bhyve/online', "true", { qos: 0, retain: true }, publishHandler)
-
-  console.log(`${ts()} - Token: ${token}`)
-})
+  if (MQTTCLIENT_ONLINE) {
+    mqttClient.publish('bhyve/alive', ts(), publishHandler);
+    mqttClient.publish('bhyve/online', "true", { qos: 0, retain: true }, publishHandler);
+  }
+  console.log(`${ts()} - Token: ${token}`);
+});
 
 orbitClient.on('user_id', (userId) => {
   console.log(`${ts()} - user_id: ${userId}`)
@@ -142,13 +120,6 @@ orbitClient.on('message', (data) => {
   }
   console.log(`${ts()} - event: ` + event)
 })
-
-let publishHandler = function (err) {
-  if (err) {
-    return console.error(err)
-  }
-  // console.log(`${ts()} - mqtt publish`)
-}
 
 let subscribeHandler = function (topic) {
   console.log(`${ts()} - subscribe topic: ` + topic)
@@ -217,13 +188,13 @@ const parseMessage = (topic, message) => {
   }
 }
 
-const handleSignal = (signal) => {
-  console.log(`${ts()} - event: ${signal}, shutting down`)
-  if (mqttClient) mqttClient.end()
-  process.exit(1)
-}
-
 const signals = ['SIGTERM', 'SIGINT'];
 signals.forEach((signal) =>
-  process.on(signal, handleSignal)
-)
+  process.on(signal, () => {
+    console.log(`${ts()} - event: ${signal}, shutting down`);
+    if (mqttClient) mqttClient.end();
+    process.exit(1);
+  })
+);
+
+module.exports = { mqttClient, orbitClient }; // Export these if needed elsewhere
