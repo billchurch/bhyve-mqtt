@@ -155,7 +155,12 @@ mqttClient.on('message', (topic, message) => {
 orbitClient.on('token', (token) => {
   if (MQTTCLIENT_ONLINE) {
     mqttClient.publish('bhyve/alive', ts(), publishHandler);
-    mqttClient.publish('bhyve/online', 'true', { qos: 0, retain: true }, publishHandler);
+    mqttClient.publish(
+      'bhyve/online',
+      'true',
+      { qos: 0, retain: true },
+      publishHandler,
+    );
   }
   orbitDebug(`Token: ${token}`);
   console.log('Orbit API Connected and Token Received');
@@ -191,9 +196,13 @@ orbitClient.on('devices', (data) => {
     orbitDebug(`deviceStatus (${deviceId}): ${deviceStatus}`);
 
     subscribeHandler(`bhyve/device/${deviceId}/refresh`);
-    mqttClient.publish(`bhyve/device/${deviceId}/details`, JSON.stringify(device), {
-      retain: true,
-    });
+    mqttClient.publish(
+      `bhyve/device/${deviceId}/details`,
+      JSON.stringify(device),
+      {
+        retain: true,
+      },
+    );
 
     // Safe access to zones with a check if zones exist
     if (device.zones && typeof device.zones === 'object') {
@@ -202,7 +211,7 @@ orbitClient.on('devices', (data) => {
         subscribeHandler(`bhyve/device/${deviceId}/zone/${station}/set`);
         mqttClient.publish(
           `bhyve/device/${deviceId}/zone/${station}`,
-          JSON.stringify(device.zones[zoneKey])
+          JSON.stringify(device.zones[zoneKey]),
         );
       });
     } else {
@@ -235,10 +244,9 @@ orbitClient.on('message', (data) => {
 const signals = ['SIGTERM', 'SIGINT'];
 signals.forEach((signal) =>
   process.on(signal, () => {
-    console.log(`${ts()} - event: ${signal}, shutting down`);
     if (mqttClient) mqttClient.end();
-    process.exit(1);
-  })
+    throw new Error(`${ts()} - event: ${signal}, shutting down`);
+  }),
 );
 
 module.exports = { mqttClient, orbitClient }; // Export these if needed elsewhere
