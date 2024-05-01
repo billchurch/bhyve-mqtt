@@ -9,7 +9,7 @@ const util = require('util');
 const Ajv = require('ajv');
 const orbitDebug = require('debug')('orbit');
 const mqttClientDebug = require('debug')('mqttClient');
-const Orbit = require('./orbit');
+const Orbit = require('bhyve-api');
 const mqttClientModule = require('./mqttClient'); // Import the module
 
 const orbitClient = new Orbit();
