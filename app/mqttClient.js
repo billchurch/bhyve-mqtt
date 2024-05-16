@@ -1,9 +1,8 @@
 // mqttClient.js
-const mqtt = require('mqtt');
-const debug = require('debug')('mqttClient');
+import mqtt from 'mqtt';
+import dotenv from 'dotenv';
 
-const ts = () => new Date().toISOString();
-require('dotenv').config();
+dotenv.config();
 
 const MQTT_CONFIG = {
   username: process.env.MQTT_USER,
@@ -20,20 +19,11 @@ const MQTT_CONFIG = {
   },
 };
 
-function handleClientError(err) {
-  console.error(`${ts()} - connection error to broker, exiting`);
-  console.error(`    ${err}`);
-  setTimeout(() => {
-    process.exit();
-  }, 10000);
-}
-
-function createMqttClient() {
+const createMqttClient = (mqttClientDebug, errorHandler) => {
   const client = mqtt.connect(process.env.MQTT_BROKER_ADDRESS, MQTT_CONFIG);
-  client.on('error', handleClientError);
-  client.on('offline', () => debug('BROKER OFFLINE'));
-  // more debug logs can be added wherever needed
+  client.on('error', errorHandler);
+  client.on('offline', () => mqttClientDebug('BROKER OFFLINE'));
   return client;
-}
+};
 
-module.exports = { createMqttClient };
+export { createMqttClient };

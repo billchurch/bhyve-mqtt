@@ -5,23 +5,30 @@
  * Bill Church - https://github.com/billchurch/bhyve-mqtt
  *
  */
-const util = require('util');
-const Ajv = require('ajv');
-const orbitDebug = require('debug')('orbit');
-const mqttClientDebug = require('debug')('mqttClient');
-const Orbit = require('bhyve-api');
-const mqttClientModule = require('./mqttClient'); // Import the module
+import util from 'util';
+import Ajv from 'ajv';
+import debug from 'debug';
+import Orbit from 'bhyve-api';
+import { createMqttClient } from './mqttClient.js'; // Import the module
+import dotenv from 'dotenv';
+
+dotenv.config();
+
+const orbitDebug = debug('orbit');
+const mqttClientDebug = debug('mqttClient');
 
 const orbitClient = new Orbit();
-require('dotenv').config();
+
+const handleMqttClientError = (err) => {
+  console.error(`${ts()} - connection error to broker: ${err}`);
+};
 
 let MQTTCLIENT_ONLINE = false;
 const ts = () => new Date().toISOString();
 
-// Use the function from mqttClient.js to create the MQTT client
-const mqttClient = mqttClientModule.createMqttClient();
+const mqttClient = createMqttClient(mqttClientDebug, handleMqttClientError);
 
-const publishHandler = function (err) {
+const publishHandler = (err) => {
   if (err) {
     console.error(`${ts()} - mqtt publish error: ${err}`);
   } else {
@@ -29,7 +36,7 @@ const publishHandler = function (err) {
   }
 };
 
-const subscribeHandler = function (topic) {
+const subscribeHandler = (topic) => {
   console.log(`${ts()} - subscribe topic: ${topic}`);
   mqttClient.subscribe(topic, (err, granted) => {
     if (err) {
@@ -43,7 +50,7 @@ const subscribeHandler = function (topic) {
 const validateCommand = (message) => {
   const ajv = new Ajv();
   const cmdSchema = {
-    type: 'object', // Specify that the root type is an object
+    type: 'object',
     properties: {
       time: {
         type: 'number',
@@ -56,17 +63,15 @@ const validateCommand = (message) => {
       },
     },
     if: {
-      // Conditional structure must also be an object
       properties: {
         state: {
           enum: ['ON', 'on'],
         },
       },
-      required: ['state'], // State must exist to validate its enum
+      required: ['state'],
     },
     then: {
-      // Define what must be true if the 'if' condition passes
-      required: ['time'], // Time must be provided if state is ON or on
+      required: ['time'],
     },
   };
 
@@ -91,7 +96,7 @@ const constructMessage = (deviceId, station, command) => {
   };
 
   if (command.state.toLowerCase() === 'on') {
-    myJSON.stations.push({ station: station, run_time: command.time });
+    myJSON.stations.push({ station, run_time: command.time });
   }
 
   return myJSON;
@@ -100,14 +105,13 @@ const constructMessage = (deviceId, station, command) => {
 const parseMessage = (topic, message) => {
   mqttClientDebug(`parseMessage: topic: ${topic}, message: ${message}`);
 
+  const matchTopic = topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/);
   switch (topic) {
-    case (topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/) || {}).input: {
+    case (matchTopic || {}).input: {
       try {
-        const found = topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/);
-        const deviceId = found[1];
-        const station = Number(found[2]);
+        const [_, deviceId, station] = matchTopic;
         const command = validateCommand(message);
-        const myJSON = constructMessage(deviceId, station, command);
+        const myJSON = constructMessage(deviceId, Number(station), command);
 
         orbitClient.send(myJSON);
         mqttClientDebug(`myJSON: ${util.inspect(myJSON, { depth: null })}`);
@@ -134,6 +138,10 @@ const orbitConnect = () => {
     password: process.env.ORBIT_PASSWORD,
   });
 };
+
+mqttClient.on('error', (err) => {
+  console.error(`${ts()} - MQTT Client Error: ${err.message}`);
+});
 
 mqttClient.on('connect', () => {
   console.log(`${ts()} - mqtt connected`);
@@ -179,7 +187,7 @@ orbitClient.on('devices', (data) => {
   if (!MQTTCLIENT_ONLINE) return;
 
   const devices = [];
-  subscribeHandler(`bhyve/device/refresh`);
+  subscribeHandler('bhyve/device/refresh');
 
   Object.keys(data).forEach((prop) => {
     const device = data[prop];
@@ -188,7 +196,6 @@ orbitClient.on('devices', (data) => {
     orbitDebug(`devices: ${JSON.stringify(devices)}`);
 
     let deviceStatus = '';
-    // Check if watering_status exists and is an object before trying to stringify
     if (device.status && typeof device.status.watering_status === 'object') {
       deviceStatus = JSON.stringify(device.status.watering_status);
     }
@@ -204,7 +211,6 @@ orbitClient.on('devices', (data) => {
       },
     );
 
-    // Safe access to zones with a check if zones exist
     if (device.zones && typeof device.zones === 'object') {
       Object.keys(device.zones).forEach((zoneKey) => {
         const { station } = device.zones[zoneKey];
@@ -219,7 +225,7 @@ orbitClient.on('devices', (data) => {
     }
   });
 
-  mqttClient.publish(`bhyve/devices`, JSON.stringify(devices));
+  mqttClient.publish('bhyve/devices', JSON.stringify(devices));
   orbitClient.connectStream();
 });
 
@@ -235,7 +241,7 @@ orbitClient.on('message', (data) => {
     if (data.device_id) {
       mqttClient.publish(`bhyve/device/${data.device_id}/message`, json);
     } else {
-      mqttClient.publish(`bhyve/message`, json);
+      mqttClient.publish('bhyve/message', json);
     }
   }
   console.log(`${ts()} - event: ${event}`);
@@ -249,4 +255,4 @@ signals.forEach((signal) =>
   }),
 );
 
-module.exports = { mqttClient, orbitClient }; // Export these if needed elsewhere
+export { mqttClient, orbitClient };

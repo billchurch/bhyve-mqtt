@@ -20,6 +20,7 @@
     "cleanmac": "find . -name '.DS_Store' -type f -delete",
     "release": "standard-version"
   },
+  "type": "module",
   "author": "bill church",
   "license": "MIT",
   "dependencies": {
