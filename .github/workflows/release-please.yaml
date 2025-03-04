@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-  workflow_dispatch: # Allow manual triggering
 
 permissions:
   contents: write
@@ -17,27 +16,28 @@ jobs:
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          config-file: release-please-config.json
-          manifest-file: .release-please-manifest.json
+          release-type: node
 
-  publish-npm:
-    needs: release-please
-    # This is the key fix - only run this job when a release is created
-    if: ${{ needs.release-please.outputs.releases_created }}
-    runs-on: ubuntu-latest
-    steps:
+      # Only proceed with the following steps if a release was created
       - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.release_created }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+        if: ${{ steps.release.outputs.release_created }}
 
-      - name: Publish package
-        run: |
-          npm ci
-          npm test
-          npm run build
-          npm publish --access public
+      - run: npm ci
+        if: ${{ steps.release.outputs.release_created }}
+
+      - run: npm test
+        if: ${{ steps.release.outputs.release_created }}
+
+      - run: npm run build # Optional if not covered by prepublishOnly
+        if: ${{ steps.release.outputs.release_created }}
+
+      - run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
+        if: ${{ steps.release.outputs.release_created }}

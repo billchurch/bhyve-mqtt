@@ -20,12 +20,14 @@ This app is designed to subscribe to the Orbit B-Hyve API and broadcast the mess
 
 ```bash
 git clone https://github.com/billchurch/bhyve-mqtt.git
-cd bhyve-mqtt/app
+cd bhyve-mqtt
 cp .env-sample .env
 # Edit .env with your credentials
 npm install
 npm start
 ```
+
+> **Note:** The project structure has been updated. The application code is now in the `/src` directory instead of `/app` directory, following standard Node.js project layout.
 
 ## Docker Usage
 
@@ -92,8 +94,7 @@ The project includes several test scripts to verify functionality:
 To run tests:
 
 ```bash
-cd app
-node test-api.js
+npm run test
 ```
 
 ## Uses bhyve-api

@@ -1,7 +1,0 @@
-{
-  "release-type": "node",
-  "package-name": "bhyve-mqtt",
-  "changelog-path": "CHANGELOG.md",
-  "include-v-in-tag": true,
-  "bootstrap-sha": "935bea42190cf2e3e80d3c4dde4fea7016aa7819"
-}
