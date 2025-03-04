@@ -47,4 +47,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           event-type: release-published
+          client-payload: '{"release": {"tag_name": "${{ steps.release.outputs.tag_name }}"}}'
           token: ${{ secrets.GITHUB_TOKEN }}
