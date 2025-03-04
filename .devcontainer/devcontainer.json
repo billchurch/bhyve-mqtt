@@ -24,7 +24,8 @@
 				"esbenp.prettier-vscode",
 				"rvest.vs-code-prettier-eslint",
 				"bierner.markdown-mermaid",
-				"stylelint.vscode-stylelint"
+				"stylelint.vscode-stylelint",
+				"sourcegraph.cody-ai"
 			]
 		}
 	},

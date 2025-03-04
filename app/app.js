@@ -20,6 +20,27 @@ const mqttClientDebug = debug('mqttClient');
 const orbitClient = new Orbit();
 
 let MQTTCLIENT_ONLINE = false;
+let ORBIT_CONNECTED = false;
+
+const subscribedTopics = new Set(); // Set to track subscribed topics
+
+const MAX_RETRIES = process.env.MAX_RETRIES
+  ? parseInt(process.env.MAX_RETRIES, 10)
+  : 10;
+const RECONNECT_PERIOD = process.env.RECONNECT_PERIOD
+  ? parseInt(process.env.RECONNECT_PERIOD, 10)
+  : 5000;
+
+const mqttConfig = {
+  brokerAddress: process.env.MQTT_BROKER_ADDRESS,
+  username: process.env.MQTT_USER,
+  password: process.env.MQTT_PASSWORD,
+  clientId: `bhyve-mqtt_${Math.random().toString(16).substring(2, 8)}`,
+  willTopic: 'bhyve/online',
+  maxRetries: MAX_RETRIES,
+  reconnectPeriod: RECONNECT_PERIOD,
+};
+
 const ts = () => new Date().toISOString();
 
 const handleMqttClientError = (err) => {
@@ -27,7 +48,51 @@ const handleMqttClientError = (err) => {
   // Additional error handling logic can be added here if needed
 };
 
-const mqttClient = createMqttClient(mqttClientDebug, handleMqttClientError);
+let mqttClient;
+
+const initializeMqttClient = () => {
+  mqttClient = createMqttClient(
+    mqttClientDebug,
+    handleMqttClientError,
+    mqttConfig,
+  );
+
+  mqttClient.on('connect', () => {
+    console.log(`${ts()} - mqtt connected`);
+    MQTTCLIENT_ONLINE = true;
+    orbitConnect();
+    resubscribeToTopics();
+
+    if (ORBIT_CONNECTED) {
+      publishOnline();
+    }
+  });
+
+  mqttClient.on('message', (topic, message) => {
+    mqttClientDebug(`parseMessage: topic: ${topic}, message: ${message}`);
+    try {
+      parseMessage(topic, message);
+    } catch (e) {
+      console.error(`${ts()} parseMessage ERROR: JSON validate failed: ${e}`);
+      console.error(`    client message: ${message.toString()}`);
+    }
+  });
+
+  mqttClient.on('offline', () => {
+    MQTTCLIENT_ONLINE = false;
+    console.warn(`${ts()} - mqtt client offline`);
+  });
+
+  mqttClient.on('close', () => {
+    MQTTCLIENT_ONLINE = false;
+    console.log(`${ts()} - mqtt client connection closed`);
+  });
+
+  mqttClient.on('reconnect', () => {
+    MQTTCLIENT_ONLINE = false;
+    console.log(`${ts()} - mqtt client reconnecting`);
+  });
+};
 
 const publishHandler = (err) => {
   if (err) {
@@ -38,14 +103,44 @@ const publishHandler = (err) => {
 };
 
 const subscribeHandler = (topic) => {
-  console.log(`${ts()} - subscribe topic: ${topic}`);
-  mqttClient.subscribe(topic, (err, granted) => {
-    if (err) {
-      console.error(`mqttClient.subscribe ${topic} error: ${err}`);
-    } else {
-      console.log(`${ts()} - granted: ${JSON.stringify(granted)}`);
-    }
+  if (!subscribedTopics.has(topic)) {
+    subscribedTopics.add(topic);
+    console.log(`${ts()} - subscribe topic: ${topic}`);
+    mqttClient.subscribe(topic, (err, granted) => {
+      if (err) {
+        console.error(`mqttClient.subscribe ${topic} error: ${err}`);
+      } else {
+        console.log(`${ts()} - granted: ${JSON.stringify(granted)}`);
+      }
+    });
+  }
+};
+
+const resubscribeToTopics = () => {
+  subscribedTopics.forEach((topic) => {
+    console.log(`${ts()} - resubscribe topic: ${topic}`);
+    mqttClient.subscribe(topic, (err, granted) => {
+      if (err) {
+        console.error(`mqttClient.subscribe ${topic} error: ${err}`);
+      } else {
+        console.log(`${ts()} - granted: ${JSON.stringify(granted)}`);
+      }
+    });
   });
+};
+
+const publishOnline = () => {
+  console.log(`${ts()} - publishOnline`);
+  if (MQTTCLIENT_ONLINE && ORBIT_CONNECTED) {
+    mqttClient.publish('bhyve/alive', ts(), publishHandler);
+    mqttClient.publish(
+      'bhyve/online',
+      'true',
+      { qos: 0, retain: true },
+      publishHandler,
+    );
+    console.log('Orbit API Connected and Authenticated');
+  }
 };
 
 const validateCommand = (message) => {
@@ -122,43 +217,17 @@ const parseMessage = (topic, message) => {
 };
 
 const orbitConnect = () => {
-  orbitClient.connect({
-    email: process.env.ORBIT_EMAIL,
-    password: process.env.ORBIT_PASSWORD,
-  });
+  if (!ORBIT_CONNECTED) {
+    orbitClient.connect({
+      email: process.env.ORBIT_EMAIL,
+      password: process.env.ORBIT_PASSWORD,
+    });
+  }
 };
-mqttClient.on('error', (err) => {
-  console.error(`${ts()} - MQTT Client Error: ${err.message}`);
-});
 
-mqttClient.on('connect', () => {
-  console.log(`${ts()} - mqtt connected`);
-  MQTTCLIENT_ONLINE = true;
-  orbitConnect();
-});
-
-mqttClient.on('message', (topic, message) => {
-  mqttClientDebug(`parseMessage: topic: ${topic}, message: ${message}`);
-  try {
-    parseMessage(topic, message);
-  } catch (e) {
-    console.error(`${ts()} parseMessage ERROR: JSON validate failed: ${e}`);
-    console.error(`    client message: ${message.toString()}`);
-  }
-});
-
-orbitClient.on('token', (token) => {
-  if (MQTTCLIENT_ONLINE) {
-    mqttClient.publish('bhyve/alive', ts(), publishHandler);
-    mqttClient.publish(
-      'bhyve/online',
-      'true',
-      { qos: 0, retain: true },
-      publishHandler,
-    );
-  }
-  orbitDebug(`Token: ${token}`);
-  console.log('Orbit API Connected and Token Received');
+orbitClient.on('authenticated', (status) => {
+  ORBIT_CONNECTED = true; // Set the flag to true
+  publishOnline();
 });
 
 orbitClient.on('user_id', (userId) => {
@@ -235,5 +304,7 @@ signals.forEach((signal) =>
     throw new Error(`${ts()} - event: ${signal}, shutting down`);
   }),
 );
+
+initializeMqttClient();
 
 export { mqttClient, orbitClient };

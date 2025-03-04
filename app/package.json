@@ -1,6 +1,6 @@
 {
   "name": "bhyve-mqtt",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A MQTT gateway for the unofficial Orbit B-Hyve API indended for use with HomeAssistant",
   "main": "app.js",
   "repository": {
@@ -17,8 +17,8 @@
   },
   "scripts": {
     "start": "node app.js",
-    "cleanmac": "find . -name '.DS_Store' -type f -delete",
-    "release": "standard-version"
+    "test": "echo \"No tests implemented yet\" && exit 0",
+    "build": "echo \"No build step needed\""
   },
   "type": "module",
   "author": "bill church",
@@ -39,7 +39,6 @@
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^17.7.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "prettier": "^2.8.8",
-    "standard-version": "^9.5.0"
+    "prettier": "^2.8.8"
   }
 }
