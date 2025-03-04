@@ -1,4 +1,4 @@
-FROM node:14.19-alpine
+FROM node:lts-alpine
 RUN apk add dumb-init
 ENV NODE_ENV production
 WORKDIR /usr/src

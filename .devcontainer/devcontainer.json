@@ -9,8 +9,9 @@
 	"mounts": [
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh/personal_id_rsa.pub,target=/home/vscode/.hostssh/id_rsa.pub,readonly,type=bind,consistency=cached"
 	],
-		"features": {
-		"ghcr.io/devcontainers/features/git-lfs:1": {}
+	"features": {
+		"ghcr.io/devcontainers-contrib/features/node-asdf:0": {},
+		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
 	},
 	"customizations": {
 		"vscode": {
@@ -23,7 +24,8 @@
 				"esbenp.prettier-vscode",
 				"rvest.vs-code-prettier-eslint",
 				"bierner.markdown-mermaid",
-				"stylelint.vscode-stylelint"
+				"stylelint.vscode-stylelint",
+				"sourcegraph.cody-ai"
 			]
 		}
 	},

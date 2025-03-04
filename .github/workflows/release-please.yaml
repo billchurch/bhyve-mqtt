@@ -1,0 +1,42 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - master # Changed from main to master based on your branch naming
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      # Only proceed with the following steps if a release was created
+      - uses: actions/checkout@v4
+        if: ${{ steps.release.outputs.releases_created }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+        if: ${{ steps.release.outputs.releases_created }}
+
+      # Navigate to app directory and publish
+      - name: Publish package
+        if: ${{ steps.release.outputs.releases_created }}
+        working-directory: ./app
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
