@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.5](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.4...v0.2.5) (2025-03-04)
+
+
+### Bug Fixes
+
+* container tagging ([b9ccd7f](https://github.com/billchurch/bhyve-mqtt/commit/b9ccd7f4263794221fdca2fb18c028a7eff14e6b))
+
 ## [0.2.4](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.3...v0.2.4) (2025-03-04)
 
 
