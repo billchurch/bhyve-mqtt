@@ -36,7 +36,7 @@
   "license": "MIT",
   "dependencies": {
     "ajv": "^8.17.1",
-    "bhyve-api": "^1.1.1",
+    "bhyve-api": "^1.2.0",
     "debug": "^4.4.0",
     "dotenv": "^16.4.7",
     "mqtt": "^5.10.4"
