@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.3.0](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.6...v0.3.0) (2025-03-04)
+
+
+### Features
+
+* upgrade bhyve-api to v1.2.0 ([3b6e897](https://github.com/billchurch/bhyve-mqtt/commit/3b6e8977f6c0df22009feaff93c4dc60237c99ef))
+
 ## [0.2.6](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.5...v0.2.6) (2025-03-04)
 
 
