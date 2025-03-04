@@ -11,6 +11,7 @@ import debug from 'debug';
 import Orbit from 'bhyve-api';
 import { createMqttClient } from './mqttClient.js';
 import dotenv from 'dotenv';
+import { TOPICS, DEFAULT_VALUES, getEnvNumber } from './constants.js';
 
 dotenv.config();
 
@@ -24,19 +25,16 @@ let ORBIT_CONNECTED = false;
 
 const subscribedTopics = new Set(); // Set to track subscribed topics
 
-const MAX_RETRIES = process.env.MAX_RETRIES
-  ? parseInt(process.env.MAX_RETRIES, 10)
-  : 10;
-const RECONNECT_PERIOD = process.env.RECONNECT_PERIOD
-  ? parseInt(process.env.RECONNECT_PERIOD, 10)
-  : 5000;
+// Get config values from environment with fallbacks
+const MAX_RETRIES = getEnvNumber('MAX_RETRIES', DEFAULT_VALUES.MAX_RETRIES);
+const RECONNECT_PERIOD = getEnvNumber('RECONNECT_PERIOD', DEFAULT_VALUES.RECONNECT_PERIOD);
 
 const mqttConfig = {
   brokerAddress: process.env.MQTT_BROKER_ADDRESS,
   username: process.env.MQTT_USER,
   password: process.env.MQTT_PASSWORD,
   clientId: `bhyve-mqtt_${Math.random().toString(16).substring(2, 8)}`,
-  willTopic: 'bhyve/online',
+  willTopic: TOPICS.online,
   maxRetries: MAX_RETRIES,
   reconnectPeriod: RECONNECT_PERIOD,
 };
@@ -102,39 +100,56 @@ const publishHandler = (err) => {
   }
 };
 
-const subscribeHandler = (topic) => {
-  if (!subscribedTopics.has(topic)) {
-    subscribedTopics.add(topic);
-    console.log(`${ts()} - subscribe topic: ${topic}`);
-    mqttClient.subscribe(topic, (err, granted) => {
-      if (err) {
-        console.error(`mqttClient.subscribe ${topic} error: ${err}`);
-      } else {
-        console.log(`${ts()} - granted: ${JSON.stringify(granted)}`);
-      }
-    });
+/**
+ * Subscribe to a topic with error handling
+ * @param {string} topic - The topic to subscribe to
+ * @param {boolean} [force=false] - Force subscription even if already subscribed
+ */
+const subscribeToTopic = (topic, force = false) => {
+  // Skip if already subscribed and not forced
+  if (!force && subscribedTopics.has(topic)) {
+    return;
   }
-};
 
-const resubscribeToTopics = () => {
-  subscribedTopics.forEach((topic) => {
-    console.log(`${ts()} - resubscribe topic: ${topic}`);
-    mqttClient.subscribe(topic, (err, granted) => {
-      if (err) {
-        console.error(`mqttClient.subscribe ${topic} error: ${err}`);
-      } else {
-        console.log(`${ts()} - granted: ${JSON.stringify(granted)}`);
+  console.log(`${ts()} - ${force ? 're' : ''}subscribe topic: ${topic}`);
+  mqttClient.subscribe(topic, (err, granted) => {
+    if (err) {
+      console.error(`mqttClient.subscribe ${topic} error: ${err}`);
+    } else {
+      // Only add to tracking set on successful subscription
+      if (!subscribedTopics.has(topic)) {
+        subscribedTopics.add(topic);
       }
-    });
+      console.log(`${ts()} - granted: ${JSON.stringify(granted)}`);
+    }
   });
 };
 
+/**
+ * Subscribe handler for new topic subscriptions
+ */
+const subscribeHandler = (topic) => {
+  subscribeToTopic(topic);
+};
+
+/**
+ * Resubscribe to all previously subscribed topics
+ */
+const resubscribeToTopics = () => {
+  subscribedTopics.forEach((topic) => {
+    subscribeToTopic(topic, true);
+  });
+};
+
+/**
+ * Publish online status to MQTT topics
+ */
 const publishOnline = () => {
   console.log(`${ts()} - publishOnline`);
   if (MQTTCLIENT_ONLINE && ORBIT_CONNECTED) {
-    mqttClient.publish('bhyve/alive', ts(), publishHandler);
+    mqttClient.publish(TOPICS.alive, ts(), publishHandler);
     mqttClient.publish(
-      'bhyve/online',
+      TOPICS.online,
       'true',
       { qos: 0, retain: true },
       publishHandler,
@@ -143,40 +158,64 @@ const publishOnline = () => {
   }
 };
 
+/**
+ * Validate command message against schema
+ * @param {string|Buffer} message - Message to validate
+ * @returns {Object} Validated command object
+ * @throws {Error} If validation fails
+ */
 const validateCommand = (message) => {
-  const ajv = new Ajv();
-  const cmdSchema = {
-    type: 'object',
-    properties: {
-      time: {
-        type: 'number',
-        minimum: 1,
-        maximum: 999,
-      },
-      state: {
-        type: 'string',
-        enum: ['ON', 'OFF', 'on', 'off'],
-      },
-    },
-    if: {
+  try {
+    // Parse message to JSON if it's a string or Buffer
+    const command = typeof message === 'string' || Buffer.isBuffer(message)
+      ? JSON.parse(message.toString())
+      : message;
+
+    // Define validation schema
+    const ajv = new Ajv({ allErrors: true });
+    const cmdSchema = {
+      type: 'object',
       properties: {
+        time: {
+          type: 'number',
+          minimum: 1,
+          maximum: 999,
+        },
         state: {
-          enum: ['ON', 'on'],
+          type: 'string',
+          enum: ['ON', 'OFF', 'on', 'off'],
         },
       },
+      if: {
+        properties: {
+          state: {
+            enum: ['ON', 'on'],
+          },
+        },
+        required: ['state'],
+      },
+      then: {
+        required: ['time'],
+      },
       required: ['state'],
-    },
-    then: {
-      required: ['time'],
-    },
-  };
+      additionalProperties: false,
+    };
 
-  const JSONvalidate = ajv.compile(cmdSchema);
-  const command = JSON.parse(message);
-  if (!JSONvalidate(command)) {
-    throw new Error(JSON.stringify(JSONvalidate.errors));
+    // Validate command against schema
+    const JSONvalidate = ajv.compile(cmdSchema);
+    if (!JSONvalidate(command)) {
+      const errors = JSONvalidate.errors.map(err =>
+        `${err.instancePath} ${err.message}`).join('; ');
+      throw new Error(`Command validation failed: ${errors}`);
+    }
+
+    return command;
+  } catch (error) {
+    if (error.name === 'SyntaxError') {
+      throw new Error(`Invalid JSON: ${error.message}`);
+    }
+    throw error;
   }
-  return command;
 };
 
 const constructMessage = (deviceId, station, command) => ({
@@ -190,29 +229,53 @@ const constructMessage = (deviceId, station, command) => ({
       : [],
 });
 
+/**
+ * Parse incoming MQTT messages and take appropriate actions
+ * @param {string} topic - The MQTT topic
+ * @param {Buffer|string} message - The message payload
+ */
 const parseMessage = (topic, message) => {
   mqttClientDebug(`parseMessage: topic: ${topic}, message: ${message}`);
 
-  const matchTopic = topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/);
-  if (matchTopic) {
-    try {
-      const [, deviceId, station] = matchTopic;
-      const command = validateCommand(message);
-      const myJSON = constructMessage(deviceId, Number(station), command);
+  try {
+    // Topic pattern for device zone control
+    const zoneSetPattern = new RegExp(`${TOPICS.device}\/([^\/]+)\/zone\/([0-9]+)\/set`);
+    const matchTopic = topic.match(zoneSetPattern);
 
-      orbitClient.send(myJSON);
-      mqttClientDebug(`myJSON: ${util.inspect(myJSON, { depth: null })}`);
-    } catch (error) {
-      console.error(`${ts()} - Error: ${error.message}`);
+    if (matchTopic) {
+      // Extract device ID and station from topic
+      const [, deviceId, station] = matchTopic;
+
+      // Validate station number
+      if (!deviceId || deviceId.trim() === '') {
+        throw new Error('Invalid device ID in topic');
+      }
+
+      const stationNum = Number(station);
+      if (isNaN(stationNum) || stationNum < 0) {
+        throw new Error(`Invalid station number: ${station}`);
+      }
+
+      // Parse and validate the command
+      const command = validateCommand(message);
+      const payload = constructMessage(deviceId, stationNum, command);
+
+      // Send command to Orbit
+      orbitClient.send(payload);
+      mqttClientDebug(`Sending payload: ${util.inspect(payload, { depth: null })}`);
     }
-  } else if (
-    topic.match(/bhyve\/device\/(.*)\/refresh/) ||
-    topic === 'bhyve/device/refresh'
-  ) {
-    console.log(`${ts()} - refresh`);
-    orbitClient.devices();
-  } else {
-    mqttClientDebug(`default: ${topic}`);
+    // Topic pattern for device refresh
+    else if (
+      topic.match(new RegExp(`${TOPICS.device}\/([^\/]+)\/refresh`)) ||
+      topic === TOPICS.deviceRefresh
+    ) {
+      console.log(`${ts()} - refresh devices`);
+      orbitClient.devices();
+    } else {
+      mqttClientDebug(`Unhandled topic: ${topic}`);
+    }
+  } catch (error) {
+    console.error(`${ts()} - Error processing message on topic ${topic}: ${error.message}`);
   }
 };
 
@@ -239,35 +302,57 @@ orbitClient.on('device_id', (deviceId) => {
   orbitDebug(`Device ID: ${deviceId}`);
 });
 
+/**
+ * Handle device data and publish to appropriate topics
+ */
 orbitClient.on('devices', (data) => {
   if (!MQTTCLIENT_ONLINE) return;
 
   const devices = [];
-  subscribeHandler('bhyve/device/refresh');
+  subscribeHandler(TOPICS.deviceRefresh);
 
   Object.values(data).forEach((device) => {
     const { id: deviceId, status, zones } = device;
+
+    if (!deviceId) {
+      console.warn(`${ts()} - Warning: Device without ID found, skipping`);
+      return;
+    }
+
     devices.push(deviceId);
     orbitDebug(`devices: ${JSON.stringify(devices)}`);
 
+    // Publish device status
     const deviceStatus = status?.watering_status
       ? JSON.stringify(status.watering_status)
       : '';
-    mqttClient.publish(`bhyve/device/${deviceId}/status`, deviceStatus);
+    mqttClient.publish(`${TOPICS.device}/${deviceId}/status`, deviceStatus);
     orbitDebug(`deviceStatus (${deviceId}): ${deviceStatus}`);
 
-    subscribeHandler(`bhyve/device/${deviceId}/refresh`);
+    // Subscribe to device refresh topic
+    subscribeHandler(`${TOPICS.device}/${deviceId}/refresh`);
+
+    // Publish device details
     mqttClient.publish(
-      `bhyve/device/${deviceId}/details`,
+      `${TOPICS.device}/${deviceId}/details`,
       JSON.stringify(device),
       { retain: true },
     );
 
+    // Process zones if they exist
     if (zones) {
       Object.values(zones).forEach(({ station }) => {
-        subscribeHandler(`bhyve/device/${deviceId}/zone/${station}/set`);
+        if (station === undefined) {
+          console.warn(`${ts()} - Warning: Zone without station found for device ${deviceId}`);
+          return;
+        }
+
+        // Subscribe to zone control topic
+        subscribeHandler(`${TOPICS.device}/${deviceId}/zone/${station}/set`);
+
+        // Publish zone details
         mqttClient.publish(
-          `bhyve/device/${deviceId}/zone/${station}`,
+          `${TOPICS.device}/${deviceId}/zone/${station}`,
           JSON.stringify(device.zones[station]),
         );
       });
@@ -276,7 +361,8 @@ orbitClient.on('devices', (data) => {
     }
   });
 
-  mqttClient.publish('bhyve/devices', JSON.stringify(devices));
+  // Publish all device IDs to a single topic
+  mqttClient.publish(TOPICS.devices, JSON.stringify(devices));
   orbitClient.connectStream();
 });
 
@@ -284,17 +370,30 @@ orbitClient.on('error', (err) => {
   console.error(`${ts()} - Orbit Error: ${err}`);
 });
 
+/**
+ * Handle messages from Orbit API and forward to MQTT
+ */
 orbitClient.on('message', (data) => {
-  const json = JSON.stringify(data);
-  orbitDebug(`Orbit Message: ${json}`);
-  const { event, device_id: deviceId } = data;
-  if (MQTTCLIENT_ONLINE) {
-    const topic = deviceId
-      ? `bhyve/device/${deviceId}/message`
-      : 'bhyve/message';
-    mqttClient.publish(topic, json);
+  try {
+    const json = JSON.stringify(data);
+    orbitDebug(`Orbit Message: ${json}`);
+
+    const { event, device_id: deviceId } = data;
+
+    // Only publish if MQTT client is online
+    if (MQTTCLIENT_ONLINE) {
+      // Choose appropriate topic based on whether deviceId is available
+      const topic = deviceId
+        ? `${TOPICS.device}/${deviceId}/message`
+        : TOPICS.message;
+
+      mqttClient.publish(topic, json);
+    }
+
+    console.log(`${ts()} - event: ${event}`);
+  } catch (error) {
+    console.error(`${ts()} - Error handling Orbit message: ${error.message}`);
   }
-  console.log(`${ts()} - event: ${event}`);
 });
 
 const signals = ['SIGTERM', 'SIGINT'];
