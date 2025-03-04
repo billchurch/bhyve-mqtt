@@ -1,4 +1,6 @@
 # bhyve-mqtt
+![image](https://github.com/user-attachments/assets/497d5413-c6f5-48ea-a4d7-2aa5324447e3)
+
 
 This app is designed to subscribe to the Orbit B-Hyve API and broadcast the messages out over MQTT topics. It also supports sending commands to control your B-Hyve devices through MQTT.
 
