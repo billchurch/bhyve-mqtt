@@ -1,11 +1,9 @@
 name: Docker Build and Publish
 
+# Note: This workflow publishes containers to:
+# - Docker Hub: https://hub.docker.com/r/billchurch/bhyve-mqtt
+# - GitHub Container Registry: ghcr.io/billchurch/bhyve-mqtt
 on:
-  push:
-    tags:
-      - 'v*'
-    branches:
-      - master
   release:
     types: [published]
 
@@ -40,11 +38,10 @@ jobs:
             billchurch/bhyve-mqtt
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=ref,event=branch
-            type=sha
+            type=semver,pattern={{version}},value=${{ github.event.release.tag_name }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.release.tag_name }}
+            type=semver,pattern={{major}},value=${{ github.event.release.tag_name }}
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@v5

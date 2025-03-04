@@ -31,7 +31,35 @@ npm start
 
 ## Docker Usage
 
-Use the provided Dockerfile to build and run in a container:
+Pre-built images are available on both Docker Hub and GitHub Container Registry:
+
+- Docker Hub: [billchurch/bhyve-mqtt](https://hub.docker.com/r/billchurch/bhyve-mqtt)
+- GitHub Container Registry: [ghcr.io/billchurch/bhyve-mqtt](https://ghcr.io/billchurch/bhyve-mqtt)
+
+### Supported Platforms
+
+The Docker images are built for multiple architectures, supporting:
+
+- `linux/amd64`: Windows, Intel Macs, standard Linux servers
+- `linux/arm64`: Apple Silicon Macs, Raspberry Pi 4 (64-bit OS)
+- `linux/arm/v7`: Raspberry Pi 3 and 4 (32-bit OS)
+- `linux/arm/v6`: Older Raspberry Pi models (Pi Zero, Pi 1)
+
+Docker will automatically pull the correct image for your platform when you run:
+
+```bash
+# From Docker Hub
+docker pull billchurch/bhyve-mqtt:latest
+
+# From GitHub Container Registry
+docker pull ghcr.io/billchurch/bhyve-mqtt:latest
+```
+
+Version tags follow semantic versioning (e.g., `1.2.3`, `1.2`, `1`).
+
+### Building Locally
+
+If you prefer to build the image yourself:
 
 ```bash
 # Build the image
