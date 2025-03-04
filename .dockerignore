@@ -1,1 +1,8 @@
+node_modules
+npm-debug.log
+.git
+.github
+.vscode
+*.md
 .env
+.env.*
