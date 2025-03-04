@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.4](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.3...v0.2.4) (2025-03-04)
+
+
+### Bug Fixes
+
+* update docker platforms ([aa02a45](https://github.com/billchurch/bhyve-mqtt/commit/aa02a4559bb5a15b64a461b7ad6fa9376e4d6adb))
+
 ## [0.2.3](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.2...v0.2.3) (2025-03-04)
 
 
