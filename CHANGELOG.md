@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.2.2](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.1...v0.2.2) (2025-03-04)
+
+
+### Bug Fixes
+
+* update container images ([b983c2f](https://github.com/billchurch/bhyve-mqtt/commit/b983c2fe651a536196c2d72f36ffeaf3017f6c11))
+* update package contents ([17924e2](https://github.com/billchurch/bhyve-mqtt/commit/17924e2716f3b32f4809186a10e89607e42629e9))
+
 ## [0.2.1](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.0...v0.2.1) (2025-03-04)
 
 
