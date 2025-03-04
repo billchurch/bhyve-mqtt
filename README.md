@@ -55,7 +55,8 @@ docker run --env-file myenvfile bhyve-mqtt
 
 ### Status Topics (published by bhyve-mqtt)
 
-* **bhyve/online** - _string_ - `true` when service is connected, `false` when disconnected (sent as LWT)
+- **bhyve/online** - _string_ - `true` when service is connected, `false` when disconnected (sent as LWT)
+
 - **bhyve/alive** - _string_ - Timestamp of last successful API connection
 - **bhyve/devices** - _json_ - Array of device IDs
 - **bhyve/device/{deviceID}/details** - _json_ - Complete device information **RETAINED**
@@ -66,7 +67,7 @@ docker run --env-file myenvfile bhyve-mqtt
 
 ### Command Topics (send to these topics)
 
-* **bhyve/device/{deviceID}/zone/{num}/set** - _json_ - Control a specific zone:
+- **bhyve/device/{deviceID}/zone/{num}/set** - _json_ - Control a specific zone:
 
   ```json
   { "state": "ON", "time": 5 }  // Turn on for 5 minutes
@@ -76,7 +77,8 @@ docker run --env-file myenvfile bhyve-mqtt
   { "state": "OFF" }  // Turn off
   ```
 
-* **bhyve/device/refresh** - _any_ - Request refresh of all device data
+- **bhyve/device/refresh** - _any_ - Request refresh of all device data
+
 - **bhyve/device/{deviceID}/refresh** - _any_ - Request refresh for specific device
 
 ## Testing
