@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.3](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.2...v0.2.3) (2025-03-04)
+
+
+### Bug Fixes
+
+* container publishing ([5641474](https://github.com/billchurch/bhyve-mqtt/commit/5641474daceef553fcef0dad29057ca5bba09e90))
+
 ## [0.2.2](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.1...v0.2.2) (2025-03-04)
 
 
