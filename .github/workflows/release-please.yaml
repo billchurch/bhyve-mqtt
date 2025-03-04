@@ -41,3 +41,10 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NODE_AUTH_TOKEN }}
         if: ${{ steps.release.outputs.release_created }}
+
+      - name: Trigger Docker workflow
+        if: ${{ steps.release.outputs.release_created }}
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: release-published
+          token: ${{ secrets.GITHUB_TOKEN }}

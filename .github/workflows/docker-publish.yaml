@@ -6,6 +6,8 @@ name: Docker Build and Publish
 on:
   release:
     types: [published]
+  repository_dispatch:
+    types: [release-published]
 
 jobs:
   build-and-push:
