@@ -3,7 +3,8 @@ name: Release Please
 on:
   push:
     branches:
-      - master # Changed from main to master based on your branch naming
+      - master
+  workflow_dispatch: # Allow manual triggering
 
 permissions:
   contents: write
@@ -19,19 +20,20 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
-      # Only proceed with the following steps if a release was created
+  publish-npm:
+    needs: release-please
+    # This is the key fix - only run this job when a release is created
+    if: ${{ needs.release-please.outputs.releases_created }}
+    runs-on: ubuntu-latest
+    steps:
       - uses: actions/checkout@v4
-        if: ${{ steps.release.outputs.releases_created }}
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
-        if: ${{ steps.release.outputs.releases_created }}
 
-      # Navigate to app directory and publish
       - name: Publish package
-        if: ${{ steps.release.outputs.releases_created }}
         working-directory: ./app
         run: |
           npm ci
