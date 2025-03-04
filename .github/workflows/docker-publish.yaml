@@ -35,6 +35,16 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set release tag
+        id: release_tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "TAG_NAME=${{ github.event.client_payload.release.tag_name }}" >> $GITHUB_OUTPUT
+          fi
+          echo "Set TAG_NAME to: $(cat $GITHUB_OUTPUT | grep TAG_NAME | cut -d= -f2)"
+
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -43,11 +53,10 @@ jobs:
             billchurch/bhyve-mqtt
             ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}},value=${{ github.event.release.tag_name }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ github.event.release.tag_name }}
-            type=semver,pattern={{major}},value=${{ github.event.release.tag_name }}
+            type=semver,pattern={{version}},value=${{ steps.release_tag.outputs.TAG_NAME }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ steps.release_tag.outputs.TAG_NAME }}
+            type=semver,pattern={{major}},value=${{ steps.release_tag.outputs.TAG_NAME }}
             type=raw,value=latest
-
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
