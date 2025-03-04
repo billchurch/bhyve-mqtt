@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.1](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.0...v0.2.1) (2025-03-04)
+
+
+### Bug Fixes
+
+* remove extra stuff from npm ([1f95b6d](https://github.com/billchurch/bhyve-mqtt/commit/1f95b6d81ccad91ad38797bbf730a13b9d349dbb))
+
 ## [0.2.0](https://github.com/billchurch/bhyve-mqtt/compare/v0.1.4...v0.2.0) (2025-03-04)
 
 
