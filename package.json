@@ -2,10 +2,10 @@
   "name": "bhyve-mqtt",
   "version": "0.1.4",
   "description": "A MQTT gateway for the unofficial Orbit B-Hyve API indended for use with HomeAssistant",
-  "main": "app.js",
+  "main": "src/app.js",
   "repository": {
     "type": "git",
-    "url": "https:/https://github.com/billchurch/bhyve-mqtt.git"
+    "url": "https://github.com/billchurch/bhyve-mqtt.git"
   },
   "keywords": [
     "orbit bhyve",
@@ -16,7 +16,7 @@
     "node": ">=16.0.0"
   },
   "scripts": {
-    "start": "node app.js",
+    "start": "node src/app.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "pretest": "npm run lint:fix",

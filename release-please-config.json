@@ -2,6 +2,5 @@
   "release-type": "node",
   "package-name": "bhyve-mqtt",
   "changelog-path": "CHANGELOG.md",
-  "include-v-in-tag": true,
-  "path": "app"
+  "include-v-in-tag": true
 }

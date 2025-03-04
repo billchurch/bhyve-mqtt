@@ -1,7 +1,7 @@
 # Build stage
 FROM node:20-alpine AS builder
 WORKDIR /build
-COPY app/ ./
+COPY package.json package-lock.json ./
 RUN npm ci
 
 # Production stage
@@ -26,12 +26,12 @@ WORKDIR /app
 
 # Copy from builder stage - including package.json
 COPY --chown=nodejs:nodejs --from=builder /build/node_modules ./node_modules
-COPY --chown=nodejs:nodejs --from=builder /build/package.json ./
-COPY --chown=nodejs:nodejs app/*.js ./
+COPY --chown=nodejs:nodejs package.json ./
+COPY --chown=nodejs:nodejs src/ ./src/
 
 # Switch to non-root user
 USER nodejs
 
 # Use dumb-init as entrypoint
 ENTRYPOINT ["dumb-init", "--"]
-CMD ["node", "app.js"]
+CMD ["node", "src/app.js"]

@@ -34,7 +34,6 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish package
-        working-directory: ./app
         run: |
           npm ci
           npm test

@@ -1,0 +1,70 @@
+Run googleapis/release-please-action@v4
+Running release-please version: 16.12.0
+❯ Fetching release-please-config.json from branch master
+❯ Fetching .release-please-manifest.json from branch master
+✔ Building releases
+✔ Building strategies by path
+❯ Fetching release-please-config.json from branch master
+❯ Fetching .release-please-manifest.json from branch master
+✔ Building pull requests
+✔ Building strategies by path
+✔ Collecting release commit SHAs
+❯ release search depth: 400
+❯ Fetching releases with cursor undefined
+⚠ Found release tag with component '', but not configured in manifest
+✔ Collecting commits since all latest releases
+❯ commit search depth: 500
+❯ Set(0) {}
+❯ Fetching merge commits on branch master with cursor: undefined
+❯ Backfilling file list for commit: 89a2f1fde6894d8e594b556087fc1fb642339c44
+❯ Found 3 files
+❯ Backfilling file list for commit: 935bea42190cf2e3e80d3c4dde4fea7016aa7819
+❯ Found 2 files
+❯ Backfilling file list for commit: 5eb6c936e59feb1a77b7363a9e079389c8fffdc2
+❯ Found 0 files
+❯ Backfilling file list for commit: 0ca596a58e643ce302bd2d2d0f69f0a85b695512
+❯ Found 1 files
+❯ Backfilling file list for commit: 7b4f2d21132d7fdbbebf2906201661221f9861d6
+❯ Found 1 files
+❯ Backfilling file list for commit: b2d4140730d2b0301af92ba4ae91737e8a037bee
+❯ Found 3 files
+❯ Backfilling file list for commit: f3d062d58410a6f6b5ac1f640ffb0632e7ad4c65
+❯ Found 1 files
+❯ Backfilling file list for commit: a6b81592cd7384e4f66df0189fa8d06fc8d11548
+❯ Found 1 files
+❯ Backfilling file list for commit: 3cdfe543f969bf86da4cc6065049e978e72a8cea
+❯ Found 5 files
+❯ Backfilling file list for commit: 209552445e15cf463249e3fb25d96cbcebc2d8e6
+❯ Found 6 files
+❯ Backfilling file list for commit: 66b233bea3aef528a702afaed564581465d1188a
+❯ Found 3 files
+❯ Backfilling file list for commit: 71f1c69a0edd48961b0021c5d846dc8fb349b458
+❯ Found 3 files
+❯ Backfilling file list for commit: 4351adf6050b640f70db3809f7d3414db16ff121
+❯ Found 19 files
+❯ Backfilling file list for commit: 8e38c25965fd5eb25ef787bf1163ff894c9ed47e
+❯ Found 13 files
+❯ Backfilling file list for commit: 179d8cedd6fdaab7e26a565ddabe1b4e92edc946
+❯ Found 1 files
+❯ Backfilling file list for commit: 359d20ffe579e89fe630367d35766c6a06809c00
+❯ Found 3 files
+❯ Backfilling file list for commit: 7b83281c6dc3407349382960aa0ab91d46f6b5a9
+❯ Found 2 files
+❯ Backfilling file list for commit: cf5b851e9f1d9c86211498122d8a7a51f559f5b8
+❯ Found 2 files
+❯ Backfilling file list for commit: 840bd46b335f07452078f534d068b13905d43a97
+❯ Found 4 files
+❯ Backfilling file list for commit: 35655461328c4d7a79d5487381ac63807840ff3e
+❯ Found 2 files
+❯ Backfilling file list for commit: 23d6527d1bda3e312729ee8841d07f47a6ab0222
+❯ Found 6 files
+❯ Backfilling file list for commit: 9f2894ddcae455ae897df0fe3be795e53dc74109
+❯ Found 4 files
+❯ Backfilling file list for commit: 79f8794410c43b0f60e6139526148a0cbcfcbf65
+❯ Found 8 files
+❯ Backfilling file list for commit: 51b3e264943118c2eb8aba6d6fb3b7f82f531fb8
+❯ Found 1 files
+❯ Backfilling file list for commit: 5b99dae09fe5079d97f7f53bf80f38cdc953f49b
+❯ Found 6 files
+✔ Splitting 0 commits by path
+❯ running plugin: Merge
