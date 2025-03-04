@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.2.6](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.5...v0.2.6) (2025-03-04)
+
+
+### Bug Fixes
+
+* docker publish with proper tags ([6eb3aa4](https://github.com/billchurch/bhyve-mqtt/commit/6eb3aa4dc71f9d4b9677b1ad63d6af925f53eb1c))
+
 ## [0.2.5](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.4...v0.2.5) (2025-03-04)
 
 
