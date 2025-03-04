@@ -196,7 +196,7 @@ const parseMessage = (topic, message) => {
   const matchTopic = topic.match(/bhyve\/device\/(.*)\/zone\/(\d)\/set/);
   if (matchTopic) {
     try {
-      const [_, deviceId, station] = matchTopic;
+      const [, deviceId, station] = matchTopic;
       const command = validateCommand(message);
       const myJSON = constructMessage(deviceId, Number(station), command);
 
@@ -225,7 +225,7 @@ const orbitConnect = () => {
   }
 };
 
-orbitClient.on('authenticated', (status) => {
+orbitClient.on('authenticated', () => {
   ORBIT_CONNECTED = true; // Set the flag to true
   publishOnline();
 });

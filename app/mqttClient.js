@@ -1,8 +1,6 @@
 // mqttClient.js
 import mqtt from 'mqtt';
 
-const ts = () => new Date().toISOString();
-
 const createMqttClient = (mqttClientDebug, errorHandler, config) => {
   const {
     brokerAddress,
@@ -40,7 +38,7 @@ const createMqttClient = (mqttClientDebug, errorHandler, config) => {
         // Connection refused: not authorized
         mqttClientDebug(`Authentication failed. Giving up.`);
         client.end(true);
-        process.exit(1);
+        throw new Error('Authentication failed');
       }
     });
 
@@ -65,7 +63,7 @@ const createMqttClient = (mqttClientDebug, errorHandler, config) => {
           `Max retries reached. Terminating process after ${maxRetries} attempts.`,
         );
         client.end(true);
-        process.exit(1);
+        throw new Error(`Max reconnect retries (${maxRetries}) reached`);
       }
     });
   };
