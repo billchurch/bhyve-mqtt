@@ -3,7 +3,7 @@
 {
 	"name": "Node.js & TypeScript",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+	"image": "mcr.microsoft.com/devcontainers/base:jammy",
 	// mount the ssh public identity file for the this project
 	// I limit to just what I need and not the whole ~/.ssh folder
 	"mounts": [
