@@ -15,6 +15,7 @@ import { createMqttConfig, DEFAULT_VALUES } from './constants.js';
  * @param {string} config.willTopic - Last Will and Testament topic
  * @param {number} config.maxRetries - Maximum reconnection attempts
  * @param {number} config.reconnectPeriod - Time between reconnection attempts in ms
+ * @param {number} [config.keepalive] - Keepalive interval in seconds
  * @returns {Object} MQTT client instance
  */
 const createMqttClient = (mqttClientDebug, errorHandler, config) => {
@@ -31,6 +32,7 @@ const createMqttClient = (mqttClientDebug, errorHandler, config) => {
     willTopic,
     maxRetries = DEFAULT_VALUES.MAX_RETRIES,
     reconnectPeriod = DEFAULT_VALUES.RECONNECT_PERIOD,
+    keepalive = DEFAULT_VALUES.KEEPALIVE_SECONDS,
   } = config;
 
   let retryCount = 0;
@@ -41,7 +43,8 @@ const createMqttClient = (mqttClientDebug, errorHandler, config) => {
     password,
     reconnectPeriod,
     clientId,
-    willTopic
+    willTopic,
+    keepalive,
   );
   /**
    * Connect to the MQTT broker and setup event handlers

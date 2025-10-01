@@ -15,6 +15,40 @@ import { TOPICS, DEFAULT_VALUES, getEnvNumber } from './constants.js';
 
 dotenv.config();
 
+const ts = () => new Date().toISOString();
+
+const REQUIRED_ENV_VARS = ['MQTT_BROKER_ADDRESS', 'ORBIT_EMAIL', 'ORBIT_PASSWORD'];
+
+const validateEnvironment = () => {
+  const missing = REQUIRED_ENV_VARS.filter((name) => {
+    const value = process.env[name];
+    return value === undefined || value.trim() === '';
+  });
+
+  if (missing.length > 0) {
+    console.error(`${ts()} - Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  const mqttUser = process.env.MQTT_USER?.trim();
+  const mqttPassword = process.env.MQTT_PASSWORD?.trim();
+  if ((mqttUser && !mqttPassword) || (!mqttUser && mqttPassword)) {
+    console.error(`${ts()} - MQTT_USER and MQTT_PASSWORD must both be provided when using authentication`);
+    process.exit(1);
+  }
+};
+
+validateEnvironment();
+
+const normalizeNumber = (value, fallback, name, { min = 1 } = {}) => {
+  if (Number.isFinite(value) && value >= min) {
+    return value;
+  }
+
+  console.warn(`${ts()} - Invalid ${name} value (${value}), falling back to ${fallback}`);
+  return fallback;
+};
+
 const orbitDebug = debug('orbit');
 const mqttClientDebug = debug('mqttClient');
 
@@ -26,8 +60,24 @@ let ORBIT_CONNECTED = false;
 const subscribedTopics = new Set(); // Set to track subscribed topics
 
 // Get config values from environment with fallbacks
-const MAX_RETRIES = getEnvNumber('MAX_RETRIES', DEFAULT_VALUES.MAX_RETRIES);
-const RECONNECT_PERIOD = getEnvNumber('RECONNECT_PERIOD', DEFAULT_VALUES.RECONNECT_PERIOD);
+const MAX_RETRIES = normalizeNumber(
+  getEnvNumber('MAX_RETRIES', DEFAULT_VALUES.MAX_RETRIES),
+  DEFAULT_VALUES.MAX_RETRIES,
+  'MAX_RETRIES',
+  { min: 0 },
+);
+const RECONNECT_PERIOD = normalizeNumber(
+  getEnvNumber('RECONNECT_PERIOD', DEFAULT_VALUES.RECONNECT_PERIOD),
+  DEFAULT_VALUES.RECONNECT_PERIOD,
+  'RECONNECT_PERIOD',
+  { min: 100 },
+);
+const KEEPALIVE_SECONDS = normalizeNumber(
+  getEnvNumber('MQTT_KEEPALIVE_SECONDS', DEFAULT_VALUES.KEEPALIVE_SECONDS),
+  DEFAULT_VALUES.KEEPALIVE_SECONDS,
+  'MQTT_KEEPALIVE_SECONDS',
+  { min: 10 },
+);
 
 const mqttConfig = {
   brokerAddress: process.env.MQTT_BROKER_ADDRESS,
@@ -37,9 +87,41 @@ const mqttConfig = {
   willTopic: TOPICS.online,
   maxRetries: MAX_RETRIES,
   reconnectPeriod: RECONNECT_PERIOD,
+  keepalive: KEEPALIVE_SECONDS,
 };
 
-const ts = () => new Date().toISOString();
+const ajv = new Ajv({ allErrors: true });
+const COMMAND_SCHEMA = {
+  type: 'object',
+  properties: {
+    time: {
+      type: 'number',
+      minimum: 1,
+      maximum: 999,
+    },
+    state: {
+      type: 'string',
+      enum: ['ON', 'OFF', 'on', 'off'],
+    },
+  },
+  if: {
+    properties: {
+      state: {
+        enum: ['ON', 'on'],
+      },
+    },
+    required: ['state'],
+  },
+  then: {
+    required: ['time'],
+  },
+  required: ['state'],
+  additionalProperties: false,
+};
+const commandSchemaValidator = ajv.compile(COMMAND_SCHEMA);
+
+const zoneSetPattern = new RegExp(`${TOPICS.device}/([^/]+)/zone/([0-9]+)/set`);
+const deviceRefreshPattern = new RegExp(`${TOPICS.device}/([^/]+)/refresh`);
 
 const handleMqttClientError = (err) => {
   console.error(`${ts()} - connection error to broker: ${err}`);
@@ -171,40 +253,9 @@ const validateCommand = (message) => {
       ? JSON.parse(message.toString())
       : message;
 
-    // Define validation schema
-    const ajv = new Ajv({ allErrors: true });
-    const cmdSchema = {
-      type: 'object',
-      properties: {
-        time: {
-          type: 'number',
-          minimum: 1,
-          maximum: 999,
-        },
-        state: {
-          type: 'string',
-          enum: ['ON', 'OFF', 'on', 'off'],
-        },
-      },
-      if: {
-        properties: {
-          state: {
-            enum: ['ON', 'on'],
-          },
-        },
-        required: ['state'],
-      },
-      then: {
-        required: ['time'],
-      },
-      required: ['state'],
-      additionalProperties: false,
-    };
-
     // Validate command against schema
-    const JSONvalidate = ajv.compile(cmdSchema);
-    if (!JSONvalidate(command)) {
-      const errors = JSONvalidate.errors.map(err =>
+    if (!commandSchemaValidator(command)) {
+      const errors = (commandSchemaValidator.errors || []).map((err) =>
         `${err.instancePath} ${err.message}`).join('; ');
       throw new Error(`Command validation failed: ${errors}`);
     }
@@ -239,7 +290,6 @@ const parseMessage = (topic, message) => {
 
   try {
     // Topic pattern for device zone control
-    const zoneSetPattern = new RegExp(`${TOPICS.device}\/([^\/]+)\/zone\/([0-9]+)\/set`);
     const matchTopic = topic.match(zoneSetPattern);
 
     if (matchTopic) {
@@ -265,10 +315,7 @@ const parseMessage = (topic, message) => {
       mqttClientDebug(`Sending payload: ${util.inspect(payload, { depth: null })}`);
     }
     // Topic pattern for device refresh
-    else if (
-      topic.match(new RegExp(`${TOPICS.device}\/([^\/]+)\/refresh`)) ||
-      topic === TOPICS.deviceRefresh
-    ) {
+    else if (topic.match(deviceRefreshPattern) || topic === TOPICS.deviceRefresh) {
       console.log(`${ts()} - refresh devices`);
       orbitClient.devices();
     } else {
@@ -397,12 +444,37 @@ orbitClient.on('message', (data) => {
 });
 
 const signals = ['SIGTERM', 'SIGINT'];
-signals.forEach((signal) =>
-  process.on(signal, () => {
-    if (mqttClient) mqttClient.end();
-    throw new Error(`${ts()} - event: ${signal}, shutting down`);
-  }),
-);
+let shuttingDown = false;
+const handleShutdown = (signal) => {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
+
+  console.log(`${ts()} - event: ${signal}, shutting down`);
+
+  try {
+    orbitClient.disconnect?.();
+  } catch (error) {
+    console.error(`${ts()} - Failed to disconnect Orbit client: ${error.message}`);
+  }
+
+  const exitProcess = () => process.exit(0);
+
+  if (mqttClient) {
+    mqttClient.end(false, () => {
+      exitProcess();
+    });
+
+    setTimeout(exitProcess, 3000).unref();
+  } else {
+    exitProcess();
+  }
+};
+
+signals.forEach((signal) => {
+  process.once(signal, handleShutdown);
+});
 
 initializeMqttClient();
 

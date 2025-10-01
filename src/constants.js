@@ -1,7 +1,8 @@
 // Default values
 export const DEFAULT_VALUES = {
     MAX_RETRIES: 10,
-    RECONNECT_PERIOD: 5000
+    RECONNECT_PERIOD: 5000,
+    KEEPALIVE_SECONDS: 60,
 };
 
 // Topic structure constants
@@ -17,18 +18,26 @@ export const TOPICS = {
 
 /**
  * Creates MQTT configuration object
- * 
+ *
  * @param {string} [username] - MQTT username
  * @param {string} [password] - MQTT password
  * @param {number} reconnectPeriod - Time between reconnection attempts in ms
  * @param {string} clientId - Client identifier
  * @param {string} willTopic - Last Will and Testament topic
+ * @param {number} keepalive - Keepalive interval in seconds
  * @returns {Object} MQTT configuration object
  */
-export const createMqttConfig = (username, password, reconnectPeriod, clientId, willTopic) => ({
+export const createMqttConfig = (
     username,
     password,
-    keepalive: 10000,
+    reconnectPeriod,
+    clientId,
+    willTopic,
+    keepalive,
+) => ({
+    username,
+    password,
+    keepalive,
     connectTimeout: 120000,
     reconnectPeriod,
     clientId,

@@ -3,7 +3,7 @@
 export default [
   // Add ignore patterns for test directory if desired
   {
-    ignores: ['./test/**'],
+    ignores: ['./test/**', './junk/**'],
   },
   {
     languageOptions: {

@@ -14,7 +14,7 @@ This app is designed to subscribe to the Orbit B-Hyve API and broadcast the mess
 
 ## Requirements
 
-- Node.js v16 or higher
+- Node.js v18 or higher
 - MQTT broker (like Mosquitto, HiveMQ, etc.)
 - Orbit B-Hyve account and devices
 
@@ -73,15 +73,18 @@ docker run --env-file myenvfile bhyve-mqtt
 
 ## Environment Configuration
 
-| key                  | description                                                           |
-|----------------------|-----------------------------------------------------------------------|
-| ORBIT_EMAIL          | Your Orbit B-Hyve account email                                       |
-| ORBIT_PASSWORD       | Your Orbit B-Hyve account password                                    |
-| MQTT_BROKER_ADDRESS  | MQTT broker URL (eg. `mqtt://localhost:1883`)                         |
-| MQTT_USER            | MQTT broker username (if required)                                    |
-| MQTT_PASSWORD        | MQTT broker password (if required)                                    |
-| MAX_RETRIES          | (Optional) Maximum connection retry attempts (default: 10)            |
-| RECONNECT_PERIOD     | (Optional) Milliseconds between reconnection attempts (default: 5000) |
+| key                   | description                                                                                     |
+|-----------------------|-------------------------------------------------------------------------------------------------|
+| ORBIT_EMAIL           | Your Orbit B-Hyve account email                                                                 |
+| ORBIT_PASSWORD        | Your Orbit B-Hyve account password                                                              |
+| MQTT_BROKER_ADDRESS   | MQTT broker URL (eg. `mqtt://localhost:1883`)                                                   |
+| MQTT_USER             | MQTT broker username (optional – required if `MQTT_PASSWORD` is set)                            |
+| MQTT_PASSWORD         | MQTT broker password (optional – required if `MQTT_USER` is set)                                |
+| MAX_RETRIES           | (Optional) Maximum connection retry attempts (default: 10)                                      |
+| RECONNECT_PERIOD      | (Optional) Milliseconds between reconnection attempts (default: 5000)                           |
+| MQTT_KEEPALIVE_SECONDS| (Optional) Keepalive interval in seconds for MQTT heartbeats (default: 60, minimum valid: 10)    |
+
+> The service now validates configuration at startup. Missing required variables or setting only one of `MQTT_USER`/`MQTT_PASSWORD` causes an immediate, descriptive exit instead of failing later in the connection flow.
 
 ## MQTT Schema
 
