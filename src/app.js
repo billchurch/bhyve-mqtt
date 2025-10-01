@@ -218,9 +218,9 @@ const subscribeHandler = (topic) => {
  * Resubscribe to all previously subscribed topics
  */
 const resubscribeToTopics = () => {
-  subscribedTopics.forEach((topic) => {
+  for (const topic of subscribedTopics) {
     subscribeToTopic(topic, true);
-  });
+  }
 };
 
 /**
@@ -290,7 +290,8 @@ const parseMessage = (topic, message) => {
 
   try {
     // Topic pattern for device zone control
-    const matchTopic = topic.match(zoneSetPattern);
+    const matchTopic = zoneSetPattern.exec(topic);
+    const refreshMatch = deviceRefreshPattern.exec(topic);
 
     if (matchTopic) {
       // Extract device ID and station from topic
@@ -315,7 +316,7 @@ const parseMessage = (topic, message) => {
       mqttClientDebug(`Sending payload: ${util.inspect(payload, { depth: null })}`);
     }
     // Topic pattern for device refresh
-    else if (topic.match(deviceRefreshPattern) || topic === TOPICS.deviceRefresh) {
+    else if (refreshMatch || topic === TOPICS.deviceRefresh) {
       console.log(`${ts()} - refresh devices`);
       orbitClient.devices();
     } else {
@@ -358,12 +359,12 @@ orbitClient.on('devices', (data) => {
   const devices = [];
   subscribeHandler(TOPICS.deviceRefresh);
 
-  Object.values(data).forEach((device) => {
+  for (const device of Object.values(data)) {
     const { id: deviceId, status, zones } = device;
 
     if (!deviceId) {
       console.warn(`${ts()} - Warning: Device without ID found, skipping`);
-      return;
+      continue;
     }
 
     devices.push(deviceId);
@@ -388,10 +389,10 @@ orbitClient.on('devices', (data) => {
 
     // Process zones if they exist
     if (zones) {
-      Object.values(zones).forEach(({ station }) => {
+      for (const { station } of Object.values(zones)) {
         if (station === undefined) {
           console.warn(`${ts()} - Warning: Zone without station found for device ${deviceId}`);
-          return;
+          continue;
         }
 
         // Subscribe to zone control topic
@@ -402,11 +403,11 @@ orbitClient.on('devices', (data) => {
           `${TOPICS.device}/${deviceId}/zone/${station}`,
           JSON.stringify(device.zones[station]),
         );
-      });
+      }
     } else {
       console.warn(`${ts()} - Warning: No zones data for device ${deviceId}`);
     }
-  });
+  }
 
   // Publish all device IDs to a single topic
   mqttClient.publish(TOPICS.devices, JSON.stringify(devices));
@@ -472,9 +473,9 @@ const handleShutdown = (signal) => {
   }
 };
 
-signals.forEach((signal) => {
+for (const signal of signals) {
   process.once(signal, handleShutdown);
-});
+}
 
 initializeMqttClient();
 
