@@ -8,6 +8,12 @@ on:
     types: [published]
   repository_dispatch:
     types: [release-published]
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g., v0.3.1)'
+        required: true
+        type: string
 
 jobs:
   build-and-push:
@@ -42,6 +48,8 @@ jobs:
             echo "TAG_NAME=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
           elif [ "${{ github.event_name }}" = "repository_dispatch" ]; then
             echo "TAG_NAME=${{ github.event.client_payload.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "TAG_NAME=${{ inputs.tag_name }}" >> $GITHUB_OUTPUT
           fi
           echo "Set TAG_NAME to: $(cat $GITHUB_OUTPUT | grep TAG_NAME | cut -d= -f2)"
 
