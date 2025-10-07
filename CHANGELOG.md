@@ -1,5 +1,13 @@
 # Change Log
 
+## [0.3.1](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.0...v0.3.1) (2025-10-07)
+
+
+### Bug Fixes
+
+* handle WebSocket reconnection failures to prevent DNS query spikes ([ca32981](https://github.com/billchurch/bhyve-mqtt/commit/ca329810bab35e748f92d39c0bf916556b1f6444))
+* WebSocket reconnection failures causing DNS query spikes ([59bf74f](https://github.com/billchurch/bhyve-mqtt/commit/59bf74f5b2d3a436e37c9eca4f7c7c8f081491ff))
+
 ## [0.3.0](https://github.com/billchurch/bhyve-mqtt/compare/v0.2.6...v0.3.0) (2025-03-04)
 
 
