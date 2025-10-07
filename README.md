@@ -116,6 +116,64 @@ docker run --env-file myenvfile bhyve-mqtt
 
 - **bhyve/device/{deviceID}/refresh** - _any_ - Request refresh for specific device
 
+## Updating
+
+### For Node.js Installations
+
+When updating to a newer version via `git pull`:
+
+```bash
+# Navigate to the project directory
+cd bhyve-mqtt
+
+# Pull the latest changes
+git pull
+
+# Install/update dependencies (IMPORTANT!)
+npm install
+
+# Restart the service
+npm start
+```
+
+**Important:** Always run `npm install` after pulling updates. This ensures:
+- New dependencies are installed
+- Updated dependencies are upgraded to correct versions
+- Security patches are applied
+
+If you're using a process manager like `pm2` or `systemd`:
+
+```bash
+# For pm2
+pm2 restart bhyve-mqtt
+
+# For systemd
+sudo systemctl restart bhyve-mqtt
+```
+
+### For Docker Installations
+
+```bash
+# Pull the latest image
+docker pull billchurch/bhyve-mqtt:latest
+# or
+docker pull ghcr.io/billchurch/bhyve-mqtt:latest
+
+# Stop and remove the old container
+docker stop bhyve-mqtt
+docker rm bhyve-mqtt
+
+# Start with the new image
+docker run -d --name bhyve-mqtt --env-file .env billchurch/bhyve-mqtt:latest
+```
+
+For Docker Compose:
+
+```bash
+docker-compose pull
+docker-compose up -d
+```
+
 ## Testing
 
 The project includes several test scripts to verify functionality:
