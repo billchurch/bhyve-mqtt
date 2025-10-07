@@ -35,15 +35,15 @@
   "license": "MIT",
   "dependencies": {
     "ajv": "^8.17.1",
-    "bhyve-api": "^1.2.1",
+    "bhyve-api": "^1.2.2",
     "debug": "^4.4.3",
     "dotenv": "^17.2.3",
     "mqtt": "^5.14.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.36.0",
-    "eslint": "^9.36.0",
+    "@eslint/js": "^9.37.0",
+    "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-n": "^17.23.1",

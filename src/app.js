@@ -419,6 +419,35 @@ orbitClient.on('error', (err) => {
 });
 
 /**
+ * Handle WebSocket close event
+ */
+orbitClient.on('close', (code, reason) => {
+  console.log(`${ts()} - WebSocket closed: code=${code}, reason=${reason || 'none'}`);
+});
+
+/**
+ * Handle WebSocket max reconnect attempts reached
+ * Triggers full reconnection with re-authentication
+ */
+orbitClient.on('max_reconnect_attempts_reached', () => {
+  console.warn(`${ts()} - WebSocket max reconnect attempts reached, will re-authenticate in 60 seconds`);
+  ORBIT_CONNECTED = false;
+
+  // Disconnect cleanly
+  try {
+    orbitClient.disconnect?.();
+  } catch (error) {
+    console.error(`${ts()} - Error during disconnect: ${error.message}`);
+  }
+
+  // Schedule full reconnection with re-authentication
+  setTimeout(() => {
+    console.log(`${ts()} - Attempting to re-authenticate and reconnect`);
+    orbitConnect();
+  }, 60000); // Wait 60 seconds before reconnecting
+});
+
+/**
  * Handle messages from Orbit API and forward to MQTT
  */
 orbitClient.on('message', (data) => {
