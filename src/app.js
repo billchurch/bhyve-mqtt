@@ -15,6 +15,40 @@ import { TOPICS, DEFAULT_VALUES, getEnvNumber } from './constants.js';
 
 dotenv.config();
 
+const ts = () => new Date().toISOString();
+
+const REQUIRED_ENV_VARS = ['MQTT_BROKER_ADDRESS', 'ORBIT_EMAIL', 'ORBIT_PASSWORD'];
+
+const validateEnvironment = () => {
+  const missing = REQUIRED_ENV_VARS.filter((name) => {
+    const value = process.env[name];
+    return value === undefined || value.trim() === '';
+  });
+
+  if (missing.length > 0) {
+    console.error(`${ts()} - Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  const mqttUser = process.env.MQTT_USER?.trim();
+  const mqttPassword = process.env.MQTT_PASSWORD?.trim();
+  if ((mqttUser && !mqttPassword) || (!mqttUser && mqttPassword)) {
+    console.error(`${ts()} - MQTT_USER and MQTT_PASSWORD must both be provided when using authentication`);
+    process.exit(1);
+  }
+};
+
+validateEnvironment();
+
+const normalizeNumber = (value, fallback, name, { min = 1 } = {}) => {
+  if (Number.isFinite(value) && value >= min) {
+    return value;
+  }
+
+  console.warn(`${ts()} - Invalid ${name} value (${value}), falling back to ${fallback}`);
+  return fallback;
+};
+
 const orbitDebug = debug('orbit');
 const mqttClientDebug = debug('mqttClient');
 
@@ -26,8 +60,24 @@ let ORBIT_CONNECTED = false;
 const subscribedTopics = new Set(); // Set to track subscribed topics
 
 // Get config values from environment with fallbacks
-const MAX_RETRIES = getEnvNumber('MAX_RETRIES', DEFAULT_VALUES.MAX_RETRIES);
-const RECONNECT_PERIOD = getEnvNumber('RECONNECT_PERIOD', DEFAULT_VALUES.RECONNECT_PERIOD);
+const MAX_RETRIES = normalizeNumber(
+  getEnvNumber('MAX_RETRIES', DEFAULT_VALUES.MAX_RETRIES),
+  DEFAULT_VALUES.MAX_RETRIES,
+  'MAX_RETRIES',
+  { min: 0 },
+);
+const RECONNECT_PERIOD = normalizeNumber(
+  getEnvNumber('RECONNECT_PERIOD', DEFAULT_VALUES.RECONNECT_PERIOD),
+  DEFAULT_VALUES.RECONNECT_PERIOD,
+  'RECONNECT_PERIOD',
+  { min: 100 },
+);
+const KEEPALIVE_SECONDS = normalizeNumber(
+  getEnvNumber('MQTT_KEEPALIVE_SECONDS', DEFAULT_VALUES.KEEPALIVE_SECONDS),
+  DEFAULT_VALUES.KEEPALIVE_SECONDS,
+  'MQTT_KEEPALIVE_SECONDS',
+  { min: 10 },
+);
 
 const mqttConfig = {
   brokerAddress: process.env.MQTT_BROKER_ADDRESS,
@@ -37,19 +87,49 @@ const mqttConfig = {
   willTopic: TOPICS.online,
   maxRetries: MAX_RETRIES,
   reconnectPeriod: RECONNECT_PERIOD,
+  keepalive: KEEPALIVE_SECONDS,
 };
 
-const ts = () => new Date().toISOString();
+const ajv = new Ajv({ allErrors: true });
+const COMMAND_SCHEMA = {
+  type: 'object',
+  properties: {
+    time: {
+      type: 'number',
+      minimum: 1,
+      maximum: 999,
+    },
+    state: {
+      type: 'string',
+      enum: ['ON', 'OFF', 'on', 'off'],
+    },
+  },
+  if: {
+    properties: {
+      state: {
+        enum: ['ON', 'on'],
+      },
+    },
+    required: ['state'],
+  },
+  then: {
+    required: ['time'],
+  },
+  required: ['state'],
+  additionalProperties: false,
+};
+const commandSchemaValidator = ajv.compile(COMMAND_SCHEMA);
+
+const zoneSetPattern = new RegExp(`${TOPICS.device}/([^/]+)/zone/([0-9]+)/set`);
+const deviceRefreshPattern = new RegExp(`${TOPICS.device}/([^/]+)/refresh`);
 
 const handleMqttClientError = (err) => {
   console.error(`${ts()} - connection error to broker: ${err}`);
   // Additional error handling logic can be added here if needed
 };
 
-let mqttClient;
-
 const initializeMqttClient = () => {
-  mqttClient = createMqttClient(
+  const mqttClient = createMqttClient(
     mqttClientDebug,
     handleMqttClientError,
     mqttConfig,
@@ -90,6 +170,8 @@ const initializeMqttClient = () => {
     MQTTCLIENT_ONLINE = false;
     console.log(`${ts()} - mqtt client reconnecting`);
   });
+
+  return mqttClient;
 };
 
 const publishHandler = (err) => {
@@ -136,9 +218,9 @@ const subscribeHandler = (topic) => {
  * Resubscribe to all previously subscribed topics
  */
 const resubscribeToTopics = () => {
-  subscribedTopics.forEach((topic) => {
+  for (const topic of subscribedTopics) {
     subscribeToTopic(topic, true);
-  });
+  }
 };
 
 /**
@@ -171,40 +253,9 @@ const validateCommand = (message) => {
       ? JSON.parse(message.toString())
       : message;
 
-    // Define validation schema
-    const ajv = new Ajv({ allErrors: true });
-    const cmdSchema = {
-      type: 'object',
-      properties: {
-        time: {
-          type: 'number',
-          minimum: 1,
-          maximum: 999,
-        },
-        state: {
-          type: 'string',
-          enum: ['ON', 'OFF', 'on', 'off'],
-        },
-      },
-      if: {
-        properties: {
-          state: {
-            enum: ['ON', 'on'],
-          },
-        },
-        required: ['state'],
-      },
-      then: {
-        required: ['time'],
-      },
-      required: ['state'],
-      additionalProperties: false,
-    };
-
     // Validate command against schema
-    const JSONvalidate = ajv.compile(cmdSchema);
-    if (!JSONvalidate(command)) {
-      const errors = JSONvalidate.errors.map(err =>
+    if (!commandSchemaValidator(command)) {
+      const errors = (commandSchemaValidator.errors || []).map((err) =>
         `${err.instancePath} ${err.message}`).join('; ');
       throw new Error(`Command validation failed: ${errors}`);
     }
@@ -239,8 +290,8 @@ const parseMessage = (topic, message) => {
 
   try {
     // Topic pattern for device zone control
-    const zoneSetPattern = new RegExp(`${TOPICS.device}\/([^\/]+)\/zone\/([0-9]+)\/set`);
-    const matchTopic = topic.match(zoneSetPattern);
+    const matchTopic = zoneSetPattern.exec(topic);
+    const refreshMatch = deviceRefreshPattern.exec(topic);
 
     if (matchTopic) {
       // Extract device ID and station from topic
@@ -265,10 +316,7 @@ const parseMessage = (topic, message) => {
       mqttClientDebug(`Sending payload: ${util.inspect(payload, { depth: null })}`);
     }
     // Topic pattern for device refresh
-    else if (
-      topic.match(new RegExp(`${TOPICS.device}\/([^\/]+)\/refresh`)) ||
-      topic === TOPICS.deviceRefresh
-    ) {
+    else if (refreshMatch || topic === TOPICS.deviceRefresh) {
       console.log(`${ts()} - refresh devices`);
       orbitClient.devices();
     } else {
@@ -303,6 +351,82 @@ orbitClient.on('device_id', (deviceId) => {
 });
 
 /**
+ * Publish device status to MQTT
+ * @param {string} deviceId - Device ID
+ * @param {Object} status - Device status object
+ */
+const publishDeviceStatus = (deviceId, status) => {
+  const deviceStatus = status?.watering_status
+    ? JSON.stringify(status.watering_status)
+    : '';
+  mqttClient.publish(`${TOPICS.device}/${deviceId}/status`, deviceStatus);
+  orbitDebug(`deviceStatus (${deviceId}): ${deviceStatus}`);
+};
+
+/**
+ * Process zones for a device
+ * @param {string} deviceId - Device ID
+ * @param {Object} zones - Zones object
+ * @param {Object} device - Full device object for publishing zone details
+ */
+const processDeviceZones = (deviceId, zones, device) => {
+  if (!zones) {
+    console.warn(`${ts()} - Warning: No zones data for device ${deviceId}`);
+    return;
+  }
+
+  for (const { station } of Object.values(zones)) {
+    if (station === undefined) {
+      console.warn(`${ts()} - Warning: Zone without station found for device ${deviceId}`);
+      continue;
+    }
+
+    // Subscribe to zone control topic
+    subscribeHandler(`${TOPICS.device}/${deviceId}/zone/${station}/set`);
+
+    // Publish zone details
+    mqttClient.publish(
+      `${TOPICS.device}/${deviceId}/zone/${station}`,
+      JSON.stringify(device.zones[station]),
+    );
+  }
+};
+
+/**
+ * Process a single device
+ * @param {Object} device - Device object
+ * @returns {string|null} Device ID if valid, null otherwise
+ */
+const processDevice = (device) => {
+  const { id: deviceId, status, zones } = device;
+
+  if (!deviceId) {
+    console.warn(`${ts()} - Warning: Device without ID found, skipping`);
+    return null;
+  }
+
+  orbitDebug(`devices: ${JSON.stringify([deviceId])}`);
+
+  // Publish device status
+  publishDeviceStatus(deviceId, status);
+
+  // Subscribe to device refresh topic
+  subscribeHandler(`${TOPICS.device}/${deviceId}/refresh`);
+
+  // Publish device details
+  mqttClient.publish(
+    `${TOPICS.device}/${deviceId}/details`,
+    JSON.stringify(device),
+    { retain: true },
+  );
+
+  // Process zones
+  processDeviceZones(deviceId, zones, device);
+
+  return deviceId;
+};
+
+/**
  * Handle device data and publish to appropriate topics
  */
 orbitClient.on('devices', (data) => {
@@ -311,55 +435,12 @@ orbitClient.on('devices', (data) => {
   const devices = [];
   subscribeHandler(TOPICS.deviceRefresh);
 
-  Object.values(data).forEach((device) => {
-    const { id: deviceId, status, zones } = device;
-
-    if (!deviceId) {
-      console.warn(`${ts()} - Warning: Device without ID found, skipping`);
-      return;
+  for (const device of Object.values(data)) {
+    const deviceId = processDevice(device);
+    if (deviceId) {
+      devices.push(deviceId);
     }
-
-    devices.push(deviceId);
-    orbitDebug(`devices: ${JSON.stringify(devices)}`);
-
-    // Publish device status
-    const deviceStatus = status?.watering_status
-      ? JSON.stringify(status.watering_status)
-      : '';
-    mqttClient.publish(`${TOPICS.device}/${deviceId}/status`, deviceStatus);
-    orbitDebug(`deviceStatus (${deviceId}): ${deviceStatus}`);
-
-    // Subscribe to device refresh topic
-    subscribeHandler(`${TOPICS.device}/${deviceId}/refresh`);
-
-    // Publish device details
-    mqttClient.publish(
-      `${TOPICS.device}/${deviceId}/details`,
-      JSON.stringify(device),
-      { retain: true },
-    );
-
-    // Process zones if they exist
-    if (zones) {
-      Object.values(zones).forEach(({ station }) => {
-        if (station === undefined) {
-          console.warn(`${ts()} - Warning: Zone without station found for device ${deviceId}`);
-          return;
-        }
-
-        // Subscribe to zone control topic
-        subscribeHandler(`${TOPICS.device}/${deviceId}/zone/${station}/set`);
-
-        // Publish zone details
-        mqttClient.publish(
-          `${TOPICS.device}/${deviceId}/zone/${station}`,
-          JSON.stringify(device.zones[station]),
-        );
-      });
-    } else {
-      console.warn(`${ts()} - Warning: No zones data for device ${deviceId}`);
-    }
-  });
+  }
 
   // Publish all device IDs to a single topic
   mqttClient.publish(TOPICS.devices, JSON.stringify(devices));
@@ -368,6 +449,35 @@ orbitClient.on('devices', (data) => {
 
 orbitClient.on('error', (err) => {
   console.error(`${ts()} - Orbit Error: ${err}`);
+});
+
+/**
+ * Handle WebSocket close event
+ */
+orbitClient.on('close', (code, reason) => {
+  console.log(`${ts()} - WebSocket closed: code=${code}, reason=${reason || 'none'}`);
+});
+
+/**
+ * Handle WebSocket max reconnect attempts reached
+ * Triggers full reconnection with re-authentication
+ */
+orbitClient.on('max_reconnect_attempts_reached', () => {
+  console.warn(`${ts()} - WebSocket max reconnect attempts reached, will re-authenticate in 60 seconds`);
+  ORBIT_CONNECTED = false;
+
+  // Disconnect cleanly
+  try {
+    orbitClient.disconnect?.();
+  } catch (error) {
+    console.error(`${ts()} - Error during disconnect: ${error.message}`);
+  }
+
+  // Schedule full reconnection with re-authentication
+  setTimeout(() => {
+    console.log(`${ts()} - Attempting to re-authenticate and reconnect`);
+    orbitConnect();
+  }, 60000); // Wait 60 seconds before reconnecting
 });
 
 /**
@@ -397,13 +507,38 @@ orbitClient.on('message', (data) => {
 });
 
 const signals = ['SIGTERM', 'SIGINT'];
-signals.forEach((signal) =>
-  process.on(signal, () => {
-    if (mqttClient) mqttClient.end();
-    throw new Error(`${ts()} - event: ${signal}, shutting down`);
-  }),
-);
+let shuttingDown = false;
+const handleShutdown = (signal) => {
+  if (shuttingDown) {
+    return;
+  }
+  shuttingDown = true;
 
-initializeMqttClient();
+  console.log(`${ts()} - event: ${signal}, shutting down`);
+
+  try {
+    orbitClient.disconnect?.();
+  } catch (error) {
+    console.error(`${ts()} - Failed to disconnect Orbit client: ${error.message}`);
+  }
+
+  const exitProcess = () => process.exit(0);
+
+  if (mqttClient) {
+    mqttClient.end(false, () => {
+      exitProcess();
+    });
+
+    setTimeout(exitProcess, 3000).unref();
+  } else {
+    exitProcess();
+  }
+};
+
+for (const signal of signals) {
+  process.once(signal, handleShutdown);
+}
+
+const mqttClient = initializeMqttClient();
 
 export { mqttClient, orbitClient };

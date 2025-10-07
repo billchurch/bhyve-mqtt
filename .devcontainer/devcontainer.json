@@ -10,7 +10,7 @@
 		"source=${localEnv:HOME}${localEnv:USERPROFILE}/.ssh/personal_id_rsa.pub,target=/home/vscode/.hostssh/id_rsa.pub,readonly,type=bind,consistency=cached"
 	],
 	"features": {
-		"ghcr.io/devcontainers-contrib/features/node-asdf:0": {},
+		"ghcr.io/devcontainers-extra/features/node-asdf:0": {},
 		"ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
 	},
 	"customizations": {
@@ -29,16 +29,12 @@
 			]
 		}
 	},
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": "/bin/bash ./.devcontainer/scripts/tools.sh >> ~/post-create-tools.log"
-
 	// Configure tool-specific properties.
 	// "customizations": {},
-
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
 	// "remoteUser": "root"
 }
