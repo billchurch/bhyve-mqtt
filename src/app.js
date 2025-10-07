@@ -128,10 +128,8 @@ const handleMqttClientError = (err) => {
   // Additional error handling logic can be added here if needed
 };
 
-let mqttClient;
-
 const initializeMqttClient = () => {
-  mqttClient = createMqttClient(
+  const mqttClient = createMqttClient(
     mqttClientDebug,
     handleMqttClientError,
     mqttConfig,
@@ -172,6 +170,8 @@ const initializeMqttClient = () => {
     MQTTCLIENT_ONLINE = false;
     console.log(`${ts()} - mqtt client reconnecting`);
   });
+
+  return mqttClient;
 };
 
 const publishHandler = (err) => {
@@ -351,6 +351,82 @@ orbitClient.on('device_id', (deviceId) => {
 });
 
 /**
+ * Publish device status to MQTT
+ * @param {string} deviceId - Device ID
+ * @param {Object} status - Device status object
+ */
+const publishDeviceStatus = (deviceId, status) => {
+  const deviceStatus = status?.watering_status
+    ? JSON.stringify(status.watering_status)
+    : '';
+  mqttClient.publish(`${TOPICS.device}/${deviceId}/status`, deviceStatus);
+  orbitDebug(`deviceStatus (${deviceId}): ${deviceStatus}`);
+};
+
+/**
+ * Process zones for a device
+ * @param {string} deviceId - Device ID
+ * @param {Object} zones - Zones object
+ * @param {Object} device - Full device object for publishing zone details
+ */
+const processDeviceZones = (deviceId, zones, device) => {
+  if (!zones) {
+    console.warn(`${ts()} - Warning: No zones data for device ${deviceId}`);
+    return;
+  }
+
+  for (const { station } of Object.values(zones)) {
+    if (station === undefined) {
+      console.warn(`${ts()} - Warning: Zone without station found for device ${deviceId}`);
+      continue;
+    }
+
+    // Subscribe to zone control topic
+    subscribeHandler(`${TOPICS.device}/${deviceId}/zone/${station}/set`);
+
+    // Publish zone details
+    mqttClient.publish(
+      `${TOPICS.device}/${deviceId}/zone/${station}`,
+      JSON.stringify(device.zones[station]),
+    );
+  }
+};
+
+/**
+ * Process a single device
+ * @param {Object} device - Device object
+ * @returns {string|null} Device ID if valid, null otherwise
+ */
+const processDevice = (device) => {
+  const { id: deviceId, status, zones } = device;
+
+  if (!deviceId) {
+    console.warn(`${ts()} - Warning: Device without ID found, skipping`);
+    return null;
+  }
+
+  orbitDebug(`devices: ${JSON.stringify([deviceId])}`);
+
+  // Publish device status
+  publishDeviceStatus(deviceId, status);
+
+  // Subscribe to device refresh topic
+  subscribeHandler(`${TOPICS.device}/${deviceId}/refresh`);
+
+  // Publish device details
+  mqttClient.publish(
+    `${TOPICS.device}/${deviceId}/details`,
+    JSON.stringify(device),
+    { retain: true },
+  );
+
+  // Process zones
+  processDeviceZones(deviceId, zones, device);
+
+  return deviceId;
+};
+
+/**
  * Handle device data and publish to appropriate topics
  */
 orbitClient.on('devices', (data) => {
@@ -360,52 +436,9 @@ orbitClient.on('devices', (data) => {
   subscribeHandler(TOPICS.deviceRefresh);
 
   for (const device of Object.values(data)) {
-    const { id: deviceId, status, zones } = device;
-
-    if (!deviceId) {
-      console.warn(`${ts()} - Warning: Device without ID found, skipping`);
-      continue;
-    }
-
-    devices.push(deviceId);
-    orbitDebug(`devices: ${JSON.stringify(devices)}`);
-
-    // Publish device status
-    const deviceStatus = status?.watering_status
-      ? JSON.stringify(status.watering_status)
-      : '';
-    mqttClient.publish(`${TOPICS.device}/${deviceId}/status`, deviceStatus);
-    orbitDebug(`deviceStatus (${deviceId}): ${deviceStatus}`);
-
-    // Subscribe to device refresh topic
-    subscribeHandler(`${TOPICS.device}/${deviceId}/refresh`);
-
-    // Publish device details
-    mqttClient.publish(
-      `${TOPICS.device}/${deviceId}/details`,
-      JSON.stringify(device),
-      { retain: true },
-    );
-
-    // Process zones if they exist
-    if (zones) {
-      for (const { station } of Object.values(zones)) {
-        if (station === undefined) {
-          console.warn(`${ts()} - Warning: Zone without station found for device ${deviceId}`);
-          continue;
-        }
-
-        // Subscribe to zone control topic
-        subscribeHandler(`${TOPICS.device}/${deviceId}/zone/${station}/set`);
-
-        // Publish zone details
-        mqttClient.publish(
-          `${TOPICS.device}/${deviceId}/zone/${station}`,
-          JSON.stringify(device.zones[station]),
-        );
-      }
-    } else {
-      console.warn(`${ts()} - Warning: No zones data for device ${deviceId}`);
+    const deviceId = processDevice(device);
+    if (deviceId) {
+      devices.push(deviceId);
     }
   }
 
@@ -506,6 +539,6 @@ for (const signal of signals) {
   process.once(signal, handleShutdown);
 }
 
-initializeMqttClient();
+const mqttClient = initializeMqttClient();
 
 export { mqttClient, orbitClient };
