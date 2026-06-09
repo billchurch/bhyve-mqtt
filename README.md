@@ -14,7 +14,7 @@ This app is designed to subscribe to the Orbit B-Hyve API and broadcast the mess
 
 ## Requirements
 
-- Node.js v18 or higher
+- Node.js v22 or higher (the Docker image and CI run Node 22 LTS)
 - MQTT broker (like Mosquitto, HiveMQ, etc.)
 - Orbit B-Hyve account and devices
 
@@ -28,8 +28,6 @@ cp .env-sample .env
 npm install
 npm start
 ```
-
-> **Note:** The project structure has been updated. The application code is now in the `/src` directory instead of `/app` directory, following standard Node.js project layout.
 
 ## Docker Usage
 
@@ -170,22 +168,17 @@ docker run -d --name bhyve-mqtt --env-file .env billchurch/bhyve-mqtt:latest
 For Docker Compose:
 
 ```bash
-docker-compose pull
-docker-compose up -d
+docker compose pull
+docker compose up -d
 ```
 
-## Testing
+## Code Quality
 
-The project includes several test scripts to verify functionality:
-
-- **test-api.js** - Tests the bhyve-api connection only
-- **test-mqtt.js** - Tests MQTT connectivity only
-- **test-integration.js** - Full end-to-end integration test
-
-To run tests:
+`npm test` runs ESLint over the project (no runtime test suite at the moment):
 
 ```bash
-npm run test
+npm run test   # eslint . --max-warnings 0
+npm run lint:fix
 ```
 
 ## Uses bhyve-api
@@ -273,8 +266,6 @@ docker rm -f bhyve-mqtt
 For easier management, you can use Docker Compose. Create a `docker-compose.yml` file:
 
 ```yaml
-version: '3'
-
 services:
   bhyve-mqtt:
     image: bhyve-mqtt:latest
@@ -287,5 +278,5 @@ services:
 Then run:
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
