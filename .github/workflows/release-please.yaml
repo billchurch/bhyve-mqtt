@@ -44,7 +44,7 @@ jobs:
 
       - name: Trigger Docker workflow
         if: ${{ steps.release.outputs.release_created }}
-        uses: peter-evans/repository-dispatch@v2
+        uses: peter-evans/repository-dispatch@v4
         with:
           event-type: release-published
           client-payload: '{"release": {"tag_name": "${{ steps.release.outputs.tag_name }}"}}'
