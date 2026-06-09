@@ -10,3 +10,23 @@ updates:
    directory: "/"
    schedule:
      interval: weekly
+
+ - package-ecosystem: "npm"
+   directory: "/"
+   schedule:
+     interval: weekly
+   groups:
+     npm-minor-patch:
+       update-types:
+         - "minor"
+         - "patch"
+
+ - package-ecosystem: "docker"
+   directory: "/"
+   schedule:
+     interval: weekly
+
+ - package-ecosystem: "github-actions"
+   directory: "/"
+   schedule:
+     interval: weekly
