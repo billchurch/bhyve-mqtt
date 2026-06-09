@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.3.2](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.1...v0.3.2) (2026-06-09)
+
+
+### Bug Fixes
+
+* **deps:** update bhyve-api to 1.2.4 and resolve npm audit vulnerabilities ([ac72a01](https://github.com/billchurch/bhyve-mqtt/commit/ac72a0161ce418d5713945eebe052302ba754a67))
+
 ## [0.3.1](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.0...v0.3.1) (2025-10-07)
 
 
