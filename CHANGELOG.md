@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.3.3](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.2...v0.3.3) (2026-06-09)
+
+
+### Bug Fixes
+
+* **docker:** use node:22-alpine to restore 32-bit ARM builds ([631b04f](https://github.com/billchurch/bhyve-mqtt/commit/631b04fdb48c93e89d9d09b7f758038e5c4e112a))
+
 ## [0.3.2](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.1...v0.3.2) (2026-06-09)
 
 
