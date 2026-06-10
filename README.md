@@ -1,6 +1,6 @@
 # bhyve-mqtt
-![image](https://github.com/user-attachments/assets/497d5413-c6f5-48ea-a4d7-2aa5324447e3)
 
+![image](https://github.com/user-attachments/assets/497d5413-c6f5-48ea-a4d7-2aa5324447e3)
 
 This app is designed to subscribe to the Orbit B-Hyve API and broadcast the messages out over MQTT topics. It also supports sending commands to control your B-Hyve devices through MQTT.
 
@@ -80,7 +80,7 @@ docker run --env-file myenvfile bhyve-mqtt
 | MQTT_PASSWORD         | MQTT broker password (optional – required if `MQTT_USER` is set)                                |
 | MAX_RETRIES           | (Optional) Maximum connection retry attempts (default: 10)                                      |
 | RECONNECT_PERIOD      | (Optional) Milliseconds between reconnection attempts (default: 5000)                           |
-| MQTT_KEEPALIVE_SECONDS| (Optional) Keepalive interval in seconds for MQTT heartbeats (default: 60, minimum valid: 10)    |
+| MQTT_KEEPALIVE_SECONDS| (Optional) Keepalive interval in seconds for MQTT heartbeats (default: 60, minimum valid: 10)   |
 
 > The service now validates configuration at startup. Missing required variables or setting only one of `MQTT_USER`/`MQTT_PASSWORD` causes an immediate, descriptive exit instead of failing later in the connection flow.
 
@@ -135,6 +135,7 @@ npm start
 ```
 
 **Important:** Always run `npm install` after pulling updates. This ensures:
+
 - New dependencies are installed
 - Updated dependencies are upgraded to correct versions
 - Security patches are applied
