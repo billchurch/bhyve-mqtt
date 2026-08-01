@@ -1,11 +1,11 @@
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # Production stage
-FROM node:22-alpine
+FROM node:25-alpine
 LABEL maintainer="Bill Church <github.com/billchurch>"
 LABEL description="Unofficial Orbit Bhyve API to MQTT gateway"
 LABEL version="1.0"
