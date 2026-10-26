@@ -13,7 +13,7 @@
     "mqtt"
   ],
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.22.1"
   },
   "scripts": {
     "start": "node src/app.js",
