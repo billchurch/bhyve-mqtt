@@ -1,5 +1,12 @@
 # Change Log
 
+## [0.3.4](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.3...v0.3.4) (2026-10-26)
+
+
+### Bug Fixes
+
+* move image to Node 24 LTS and refresh CA store ([#94](https://github.com/billchurch/bhyve-mqtt/issues/94)) ([ac76e9c](https://github.com/billchurch/bhyve-mqtt/commit/ac76e9cdc0b4dd232ff1e2c380599208e8e08441))
+
 ## [0.3.3](https://github.com/billchurch/bhyve-mqtt/compare/v0.3.2...v0.3.3) (2026-06-09)
 
 
