@@ -1,17 +1,18 @@
 # Build stage
-FROM node:25-alpine AS builder
+FROM node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS builder
 WORKDIR /build
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # Production stage
-FROM node:25-alpine
+FROM node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53
 LABEL maintainer="Bill Church <github.com/billchurch>"
 LABEL description="Unofficial Orbit Bhyve API to MQTT gateway"
 LABEL version="1.0"
 
-# Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+# Install dumb-init for proper signal handling and refresh the CA store
+# (eMudhra intermediate CA compromise, 2026-10)
+RUN apk add --no-cache --upgrade dumb-init ca-certificates
 
 # Set environment variables
 ENV NODE_ENV=production \

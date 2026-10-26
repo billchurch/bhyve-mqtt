@@ -14,7 +14,7 @@ This app is designed to subscribe to the Orbit B-Hyve API and broadcast the mess
 
 ## Requirements
 
-- Node.js v22 or higher (the Docker image and CI run Node 22 LTS)
+- Node.js v24.22.1 or higher (the Docker image and CI run Node 24 LTS)
 - MQTT broker (like Mosquitto, HiveMQ, etc.)
 - Orbit B-Hyve account and devices
 
